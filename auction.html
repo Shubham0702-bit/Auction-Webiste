@@ -1,0 +1,3161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Elite Auction — Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+:root {
+  --bg: #05060a;
+  --surface: rgba(255,255,255,0.03);
+  --surface-2: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.08);
+  --border-bright: rgba(255,255,255,0.18);
+  --gold: #e8b84b;
+  --gold-dim: rgba(232,184,75,0.15);
+  --gold-glow: rgba(232,184,75,0.4);
+  --red: #ff4444;
+  --blue: #3b9eff;
+  --green: #00e87a;
+  --white: #f0f0f0;
+  --muted: rgba(255,255,255,0.35);
+  --font-d: 'Bebas Neue', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --font-m: 'Space Mono', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font-b);background:var(--bg);color:var(--white);height:100vh;overflow:hidden;
+  display:grid;grid-template-columns:300px 1fr 300px;position:relative;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(232,184,75,0.07) 0%,transparent 70%),
+    radial-gradient(ellipse 60% 40% at 20% 100%,rgba(59,158,255,0.05) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%,rgba(255,68,68,0.05) 0%,transparent 60%);
+  pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+  pointer-events:none;z-index:0;}
+
+.panel{position:relative;z-index:2;background:rgba(0,0,0,0.5);backdrop-filter:blur(20px);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px;gap:12px;overflow-y:auto;}
+.panel.right{border-right:none;border-left:1px solid var(--border);}
+.panel-label{font-family:var(--font-d);font-size:0.7rem;letter-spacing:0.3em;color:var(--muted);
+  text-align:center;padding-bottom:10px;border-bottom:1px solid var(--border);}
+
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;
+  position:relative;transition:border-color 0.3s,box-shadow 0.3s;}
+.team-card.t1{border-top:3px solid var(--red);}
+.team-card.t2{border-top:3px solid var(--blue);}
+.team-card.active-bidder{border-color:var(--gold);box-shadow:0 0 30px var(--gold-glow);animation:cardPulse 1.5s ease-in-out infinite;}
+@keyframes cardPulse{0%,100%{box-shadow:0 0 20px var(--gold-glow);}50%{box-shadow:0 0 50px var(--gold-glow),0 0 80px rgba(232,184,75,0.2);}}
+.bidder-badge{position:absolute;top:-9px;right:12px;background:var(--gold);color:#000;
+  font-family:var(--font-d);font-size:0.62rem;letter-spacing:0.15em;padding:2px 10px;border-radius:20px;display:none;}
+.team-card.active-bidder .bidder-badge{display:block;}
+.team-name{font-family:var(--font-d);font-size:1.2rem;letter-spacing:0.1em;}
+.team-budget{font-family:var(--font-m);font-size:1.4rem;font-weight:700;margin:4px 0 8px;
+  transition:color 0.6s,text-shadow 0.6s;}
+/* Budget colour is set dynamically via JS — green/amber/red */
+.team-meta{display:flex;gap:6px;margin-bottom:8px;}
+.meta-pill{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+  padding:2px 8px;font-size:0.68rem;color:var(--muted);}
+.meta-pill span{color:var(--white);font-weight:700;}
+
+/* Captain section */
+.captain-section{display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:linear-gradient(135deg,rgba(232,184,75,0.08),rgba(232,184,75,0.03));
+  border:1px solid rgba(232,184,75,0.2);border-radius:10px;margin-bottom:6px;}
+.captain-img{width:38px;height:38px;border-radius:8px;object-fit:cover;object-position:top;
+  border:2px solid rgba(232,184,75,0.5);flex-shrink:0;background:var(--surface-2);}
+.captain-img-ph{width:38px;height:38px;border-radius:8px;background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;
+  border:2px solid rgba(232,184,75,0.3);}
+.captain-info{flex:1;min-width:0;}
+.captain-label{font-family:var(--font-d);font-size:0.62rem;letter-spacing:0.2em;color:var(--gold);margin-bottom:1px;}
+.captain-name{font-family:var(--font-d);font-size:0.95rem;letter-spacing:0.05em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);}
+.captain-edit{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.6rem;
+  padding:2px 7px;border-radius:5px;cursor:pointer;font-family:var(--font-b);transition:all 0.2s;flex-shrink:0;}
+.captain-edit:hover{border-color:var(--gold);color:var(--gold);}
+
+/* Captain setup modal */
+.captain-modal{position:fixed;inset:0;z-index:160;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.captain-modal.show{opacity:1;pointer-events:all;}
+.captain-card{background:#0f1018;border:1px solid rgba(232,184,75,0.35);border-radius:20px;
+  padding:28px 32px;min-width:340px;display:flex;flex-direction:column;gap:16px;
+  animation:capPop 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+.captain-card h3{font-family:var(--font-d);font-size:1.4rem;letter-spacing:0.15em;color:var(--gold);}
+.captain-field{display:flex;flex-direction:column;gap:6px;}
+.captain-field label{font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
+.captain-field input{background:rgba(255,255,255,0.05);border:1px solid var(--border-bright);
+  border-radius:9px;padding:10px 12px;color:var(--white);font-family:var(--font-b);font-size:0.9rem;outline:none;
+  transition:border-color 0.2s;}
+.captain-field input:focus{border-color:var(--gold);}
+.captain-drop{width:100%;height:100px;border-radius:10px;border:2px dashed var(--border-bright);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  background:var(--surface);cursor:pointer;position:relative;overflow:hidden;transition:border-color 0.2s;}
+.captain-drop:hover{border-color:var(--gold);}
+.captain-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.captain-drop img{width:100%;height:100%;object-fit:cover;border-radius:8px;display:none;}
+.captain-drop .cdrop-hint{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;}
+.captain-drop .cdrop-hint i{font-size:1.4rem;color:var(--muted);}
+.captain-drop .cdrop-hint span{font-size:0.72rem;color:var(--muted);}
+.captain-save-btn{font-family:var(--font-d);font-size:1rem;letter-spacing:0.15em;
+  background:linear-gradient(135deg,var(--gold),#f5cc6a);color:#000;border:none;
+  padding:11px;border-radius:10px;cursor:pointer;transition:transform 0.15s;}
+.captain-save-btn:hover{transform:scale(1.03);}
+.captain-cancel{background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:var(--font-b);font-size:0.8rem;padding:8px;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+.captain-cancel:hover{border-color:var(--border-bright);color:var(--white);}
+
+.player-list{display:flex;flex-direction:column;gap:2px;}
+.player-entry{display:flex;justify-content:space-between;padding:4px 0;
+  border-bottom:1px solid var(--border);font-size:0.75rem;animation:slideIn 0.4s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+.pname{color:rgba(255,255,255,0.75);}
+.pprice{font-family:var(--font-m);font-size:0.68rem;color:var(--green);}
+
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);
+  color:var(--muted);font-size:0.75rem;padding:6px 12px;border-radius:8px;cursor:pointer;
+  transition:all 0.2s;width:100%;font-family:var(--font-b);}
+.back-btn:hover{border-color:var(--border-bright);color:var(--white);}
+
+/* Pool panel */
+.pool-tabs{display:flex;gap:5px;flex-wrap:wrap;}
+.pool-tab{font-family:var(--font-d);font-size:0.7rem;letter-spacing:0.08em;padding:4px 10px;
+  border-radius:16px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+.pool-tab:hover{border-color:var(--border-bright);color:var(--white);}
+.pool-tab.active{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);}
+.tab-count{font-family:var(--font-m);font-size:0.6rem;opacity:0.7;margin-left:4px;}
+.pool-scroll{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+.pool-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;
+  background:var(--surface);border:1px solid var(--border);}
+.pool-item.sold-item{opacity:0.28;text-decoration:line-through;}
+.pool-item-img{width:30px;height:30px;border-radius:6px;object-fit:cover;background:var(--surface-2);
+  display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;overflow:hidden;}
+.pool-item-img img{width:100%;height:100%;object-fit:cover;border-radius:6px;}
+.pool-item-info{flex:1;min-width:0;}
+.pool-item-name{font-size:0.77rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pool-item-base{font-family:var(--font-m);font-size:0.62rem;color:var(--muted);}
+.pool-cat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* STAGE */
+.stage{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:16px;}
+.top-bar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:center;
+  gap:24px;padding:14px 24px;background:rgba(0,0,0,0.6);border-bottom:1px solid var(--border);backdrop-filter:blur(10px);}
+.auction-title{font-family:var(--font-d);font-size:0.95rem;letter-spacing:0.3em;color:var(--muted);}
+.timer-wrap{display:flex;align-items:center;gap:10px;}
+.timer-display{font-family:var(--font-m);font-size:2.8rem;font-weight:700;line-height:1;min-width:80px;text-align:center;transition:color 0.5s;}
+.timer-display.safe  {color:var(--green);text-shadow:0 0 20px rgba(0,232,122,0.6);}
+.timer-display.warn  {color:var(--gold);text-shadow:0 0 20px var(--gold-glow);}
+.timer-display.danger{color:var(--red);text-shadow:0 0 30px rgba(255,68,68,0.8);animation:timerPulse 0.5s infinite;}
+@keyframes timerPulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.gavel-btn{background:none;border:none;cursor:pointer;color:var(--gold);font-size:1.8rem;
+  transition:transform 0.15s;filter:drop-shadow(0 0 8px var(--gold-glow));}
+.gavel-btn.strike{animation:gavelStrike 0.3s ease-out;}
+@keyframes gavelStrike{0%{transform:rotate(0) scale(1);}40%{transform:rotate(-40deg) scale(1.3);}100%{transform:rotate(0) scale(1);}}
+
+/* Start */
+.start-screen{display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;}
+.auction-headline{font-family:var(--font-d);font-size:4rem;line-height:1;letter-spacing:0.08em;
+  background:linear-gradient(135deg,var(--gold) 0%,#fff 50%,var(--gold) 100%);background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 3s linear infinite;}
+@keyframes shimmer{to{background-position:200% center;}}
+.start-hint{font-size:0.75rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;}
+.pot-selector{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:480px;}
+.pot-sel-btn{font-family:var(--font-d);font-size:1rem;letter-spacing:0.08em;padding:12px 20px;
+  border-radius:12px;border:1px solid;cursor:pointer;transition:all 0.2s;background:transparent;}
+.pot-sel-btn:hover{transform:translateY(-2px);}
+.pot-sel-btn.bat {border-color:#3b9eff;color:#3b9eff;}
+.pot-sel-btn.bat:hover{background:rgba(59,158,255,0.15);}
+.pot-sel-btn.bowl{border-color:#ff4444;color:#ff4444;}
+.pot-sel-btn.bowl:hover{background:rgba(255,68,68,0.15);}
+.pot-sel-btn.ar  {border-color:#00e87a;color:#00e87a;}
+.pot-sel-btn.ar:hover{background:rgba(0,232,122,0.15);}
+.pot-sel-btn.wk  {border-color:#c084fc;color:#c084fc;}
+.pot-sel-btn.wk:hover{background:rgba(192,132,252,0.15);}
+.pot-sel-btn.empty{opacity:0.28;cursor:not-allowed;pointer-events:none;}
+/* Support for custom pots */
+.pot-sel-btn.custom{border-color:var(--pot-color);color:var(--pot-color);}
+.pot-sel-btn.custom:hover{background:var(--pot-hover)}
+.sel-count{font-family:var(--font-m);font-size:0.62rem;margin-left:5px;opacity:0.65;}
+
+/* Player card */
+.player-stage{display:none;flex-direction:column;align-items:center;gap:0;
+  animation:stageIn 0.6s cubic-bezier(0.34,1.56,0.64,1);width:100%;}
+@keyframes stageIn{from{opacity:0;transform:translateY(30px) scale(0.95);}to{opacity:1;transform:scale(1);}}
+.player-showcase{display:flex;align-items:center;gap:32px;margin-top:72px;}
+.img-frame{position:relative;flex-shrink:0;}
+.img-ring{position:absolute;inset:-7px;border-radius:22px;animation:spin 4s linear infinite;z-index:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.img-ring-mask{position:absolute;inset:-3px;border-radius:20px;background:var(--bg);z-index:1;}
+.p-image{width:200px;height:200px;object-fit:cover;object-position:top;border-radius:16px;
+  position:relative;z-index:2;display:block;border:2px solid rgba(232,184,75,0.3);background:var(--surface-2);}
+.p-image-placeholder{width:200px;height:200px;border-radius:16px;position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:center;font-size:3.5rem;
+  background:var(--surface-2);border:2px solid rgba(232,184,75,0.2);}
+.player-info{text-align:left;}
+.p-role-badge{display:inline-flex;align-items:center;gap:5px;background:var(--gold-dim);
+  border:1px solid rgba(232,184,75,0.3);color:var(--gold);font-size:0.7rem;font-weight:700;
+  letter-spacing:0.2em;text-transform:uppercase;padding:3px 12px;border-radius:20px;margin-bottom:8px;}
+.p-name{font-family:var(--font-d);font-size:2.8rem;line-height:1;letter-spacing:0.04em;margin-bottom:3px;}
+.base-hint{font-size:0.72rem;color:var(--muted);letter-spacing:0.1em;margin-bottom:10px;}
+.price-label{font-size:0.7rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;}
+.price-display{display:flex;align-items:baseline;gap:6px;}
+.price-value{font-family:var(--font-m);font-size:2.6rem;font-weight:700;color:var(--green);
+  text-shadow:0 0 30px rgba(0,232,122,0.6);}
+.price-value.bump{animation:priceBump 0.2s ease-out;}
+@keyframes priceBump{0%{transform:scale(1);}50%{transform:scale(1.15);}100%{transform:scale(1);}}
+.price-unit{font-family:var(--font-m);font-size:1rem;color:var(--muted);}
+
+/* ── BUNDLE 1: PARTICLES · CONFETTI · WAR MODE · ENTRANCE ── */
+
+/* Full-screen canvas layers for particles & confetti — above sold overlay (z:100) */
+#particles-canvas, #confetti-canvas {
+  position:fixed;inset:0;pointer-events:none;z-index:105;
+}
+
+/* War mode banner */
+.war-mode-banner {
+  display:none;
+  align-items:center;justify-content:center;gap:8px;
+  padding:7px 0;border-radius:10px;width:100%;
+  font-family:var(--font-d);font-size:0.9rem;letter-spacing:0.2em;
+  background:linear-gradient(90deg,rgba(255,68,68,0.12),rgba(59,158,255,0.12));
+  border:1px solid rgba(255,255,255,0.1);
+  animation:warPulse 0.9s ease-in-out infinite;}
+.war-mode-banner.active{display:flex;}
+@keyframes warPulse{
+  0%,100%{border-color:rgba(255,68,68,0.35);box-shadow:0 0 12px rgba(255,68,68,0.2);}
+  50%    {border-color:rgba(59,158,255,0.35);box-shadow:0 0 12px rgba(59,158,255,0.2);}}
+.war-t1{color:var(--red);}
+.war-t2{color:var(--blue);}
+.war-vs{color:var(--gold);font-size:0.75rem;}
+
+/* Record sale flash */
+.record-flash {
+  position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:95;
+  font-family:var(--font-d);font-size:1rem;letter-spacing:0.25em;
+  background:linear-gradient(135deg,rgba(232,184,75,0.95),rgba(245,204,106,0.95));
+  color:#000;padding:10px 28px;border-radius:30px;
+  box-shadow:0 0 30px var(--gold-glow);
+  opacity:0;pointer-events:none;
+  animation:none;}
+.record-flash.show{animation:recordPop 2.8s ease forwards;}
+@keyframes recordPop{
+  0%  {opacity:0;transform:translateX(-50%) scale(0.6);}
+  15% {opacity:1;transform:translateX(-50%) scale(1.05);}
+  25% {transform:translateX(-50%) scale(1);}
+  75% {opacity:1;transform:translateX(-50%) scale(1);}
+  100%{opacity:0;transform:translateX(-50%) scale(0.9);}}
+
+/* Player stage — upgraded cinematic entrance */
+.player-stage{display:none;flex-direction:column;align-items:center;gap:0;width:100%;}
+.player-stage.enter{animation:playerEnter 0.7s cubic-bezier(0.22,1,0.36,1) both;}
+@keyframes playerEnter{
+  0%  {opacity:0;transform:translateY(60px) scale(0.88);}
+  60% {opacity:1;transform:translateY(-8px) scale(1.02);}
+  100%{opacity:1;transform:translateY(0) scale(1);}}
+
+/* Timer urgency shake at ≤10s */
+.timer-display.urgent{animation:timerShake 0.4s ease-in-out infinite;}
+@keyframes timerShake{
+  0%,100%{transform:translateX(0);}
+  20%    {transform:translateX(-4px);}
+  40%    {transform:translateX(4px);}
+  60%    {transform:translateX(-3px);}
+  80%    {transform:translateX(3px);}}
+
+/* Bid section */
+.bid-section{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;max-width:500px;margin-top:16px;}
+.bid-row{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;width:100%;align-items:center;}
+.bid-btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 14px;
+  border:none;border-radius:12px;font-family:var(--font-d);font-size:1rem;letter-spacing:0.1em;
+  cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;}
+.bid-btn:hover{transform:translateY(-3px);}
+.bid-btn.t1{background:linear-gradient(135deg,rgba(255,68,68,0.25),rgba(255,68,68,0.08));
+  border:1px solid rgba(255,68,68,0.4);color:var(--red);}
+.bid-btn.t1:hover{box-shadow:0 6px 24px rgba(255,68,68,0.25);}
+.bid-btn.t2{background:linear-gradient(135deg,rgba(59,158,255,0.25),rgba(59,158,255,0.08));
+  border:1px solid rgba(59,158,255,0.4);color:var(--blue);}
+.bid-btn.t2:hover{box-shadow:0 6px 24px rgba(59,158,255,0.25);}
+.vs-divider{font-family:var(--font-d);font-size:0.85rem;color:var(--muted);letter-spacing:0.15em;}
+.inc-row{display:flex;gap:7px;}
+.inc-btn{background:var(--surface-2);border:1px solid var(--border-bright);color:var(--white);
+  font-family:var(--font-m);font-size:0.74rem;padding:8px 14px;border-radius:9px;cursor:pointer;transition:all 0.2s;}
+.inc-btn:hover{background:rgba(255,255,255,0.1);transform:translateY(-2px);}
+.sold-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--green),#00c067);
+  color:#000;font-family:var(--font-d);font-size:1.5rem;letter-spacing:0.2em;border:none;
+  border-radius:12px;cursor:pointer;box-shadow:0 0 25px rgba(0,232,122,0.35);transition:transform 0.2s,box-shadow 0.2s;}
+.sold-btn:hover{transform:translateY(-3px);box-shadow:0 0 50px rgba(0,232,122,0.6);}
+.unsold-btn{width:100%;padding:8px;background:transparent;color:var(--muted);
+  font-family:var(--font-d);font-size:0.95rem;letter-spacing:0.2em;border:1px solid var(--border);
+  border-radius:9px;cursor:pointer;transition:all 0.2s;margin-top:-4px;}
+.unsold-btn:hover{border-color:var(--border-bright);color:var(--white);}
+
+/* ── REVEAL OVERLAY ── */
+.reveal-overlay{
+  position:fixed;inset:0;z-index:90;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(5,6,10,0.98);backdrop-filter:blur(24px);
+  opacity:0;pointer-events:none;transition:opacity 0.4s;}
+.reveal-overlay.show{opacity:1;pointer-events:all;}
+
+.rv-phase{
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  text-align:center;animation:rvFadeIn 0.5s ease both;}
+@keyframes rvFadeIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+@keyframes rvFadeOut{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-16px);}}
+.rv-phase.out{animation:rvFadeOut 0.3s ease both;}
+
+.rv-eyebrow{
+  font-family:var(--font-d);font-size:0.85rem;letter-spacing:0.45em;
+  color:var(--muted);text-transform:uppercase;}
+
+.rv-headline{
+  font-family:var(--font-d);font-size:4.5rem;line-height:1.05;letter-spacing:0.06em;
+  color:var(--white);}
+
+/* Slot drum */
+.slot-drum{
+  position:relative;width:520px;height:80px;overflow:hidden;
+  border:1px solid rgba(232,184,75,0.3);border-radius:14px;
+  background:rgba(0,0,0,0.6);}
+.slot-drum::before,.slot-drum::after{
+  content:'';position:absolute;left:0;right:0;height:22px;z-index:2;pointer-events:none;}
+.slot-drum::before{top:0;background:linear-gradient(to bottom,rgba(5,6,10,0.98),transparent);}
+.slot-drum::after {bottom:0;background:linear-gradient(to top,  rgba(5,6,10,0.98),transparent);}
+.slot-highlight{
+  position:absolute;top:50%;left:0;right:0;height:32px;transform:translateY(-50%);
+  border-top:1px solid rgba(232,184,75,0.55);border-bottom:1px solid rgba(232,184,75,0.55);
+  background:rgba(232,184,75,0.07);z-index:1;pointer-events:none;}
+.slot-reel{
+  display:flex;flex-direction:column;align-items:center;
+  position:absolute;top:0;left:0;right:0;
+  will-change:transform;}
+.slot-item{
+  height:32px;line-height:32px;
+  font-family:var(--font-d);font-size:1.35rem;letter-spacing:0.06em;
+  color:rgba(255,255,255,0.35);white-space:nowrap;
+  width:100%;text-align:center;padding:0 16px;flex-shrink:0;}
+
+/* Big name reveal */
+.rv-big-name{
+  font-family:var(--font-d);font-size:5.5rem;line-height:1;letter-spacing:0.05em;
+  background:linear-gradient(135deg,var(--gold) 0%,#fff 50%,var(--gold) 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:rvFadeIn 0.5s ease both, shimmer 2s linear infinite;}
+@keyframes shimmer{to{background-position:200% center;}}
+
+.rv-category{
+  font-family:var(--font-d);font-size:1.1rem;letter-spacing:0.25em;
+  color:var(--muted);}
+
+/* Countdown */
+.rv-countdown{
+  font-family:var(--font-d);font-size:10rem;line-height:1;
+  color:var(--gold);
+  text-shadow:0 0 60px var(--gold-glow);
+  animation:countPulse 0.95s ease-in-out forwards;}
+@keyframes countPulse{
+  0%  {transform:scale(1.6);opacity:0;}
+  30% {transform:scale(1.0);opacity:1;}
+  75% {transform:scale(1.0);opacity:1;}
+  100%{transform:scale(0.85);opacity:0.15;}}
+
+/* Minus button */
+.dec-row{display:flex;gap:7px;}
+.dec-btn{background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.25);color:#ff8888;
+  font-family:var(--font-m);font-size:0.74rem;padding:8px 14px;border-radius:9px;cursor:pointer;transition:all 0.2s;}
+.dec-btn:hover{background:rgba(255,68,68,0.18);transform:translateY(-2px);}
+
+/* Real-time budget bar */
+.budget-bar-wrap{margin-top:6px;}
+.budget-bar-label{display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted);margin-bottom:4px;font-family:var(--font-m);}
+.budget-bar-label .used-lbl{color:var(--green);}
+.budget-bar-track{height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;}
+.budget-bar-fill{height:100%;border-radius:3px;transition:width 0.4s ease,background 0.4s;}
+
+/* Unsold pot selector button */
+.pot-sel-btn.unsold{border-color:#f97316;color:#f97316;}
+.pot-sel-btn.unsold:hover{background:rgba(249,115,22,0.15);}
+
+/* Unsold pool item styling */
+.pool-item.unsold-pot-item .pool-item-name{color:#fb923c;}
+.cap-modal{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.cap-modal.show{opacity:1;pointer-events:all;}
+.cap-card{background:#0f1018;border:1px solid rgba(255,68,68,0.45);border-radius:20px;
+  padding:32px 40px;text-align:center;max-width:440px;
+  animation:capPop 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes capPop{from{transform:scale(0.75);opacity:0;}to{transform:scale(1);opacity:1;}}
+.cap-icon{font-size:2.8rem;margin-bottom:12px;}
+.cap-title{font-family:var(--font-d);font-size:1.8rem;letter-spacing:0.12em;color:#ff6b6b;margin-bottom:8px;}
+.cap-body{font-size:0.88rem;color:var(--muted);line-height:1.7;margin-bottom:20px;}
+.cap-body strong{color:var(--white);}
+.cap-ok{font-family:var(--font-d);font-size:1rem;letter-spacing:0.15em;
+  background:linear-gradient(135deg,#ff4444,#ff6b6b);color:#fff;border:none;
+  padding:10px 32px;border-radius:50px;cursor:pointer;transition:transform 0.15s;}
+.cap-ok:hover{transform:scale(1.05);}
+
+/* Max-bid pill shown on each team card during auction */
+.max-bid-pill{font-family:var(--font-m);font-size:0.62rem;color:var(--muted);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+  padding:2px 7px;display:inline-block;margin-top:3px;}
+.max-bid-pill span{color:var(--gold);}
+
+/* Timer reset flash */
+@keyframes timerReset{0%{transform:scale(1.3);color:#fff;}100%{transform:scale(1);}}
+.team-warn{
+  display:none;align-items:center;gap:8px;
+  background:rgba(255,68,68,0.12);border:1px solid rgba(255,68,68,0.35);
+  color:#ff8888;font-family:var(--font-d);font-size:0.85rem;letter-spacing:0.12em;
+  padding:9px 18px;border-radius:10px;width:100%;justify-content:center;}
+.team-warn.show{display:flex;animation:shakeWarn 0.4s ease;}
+@keyframes shakeWarn{
+  0%  {transform:translateX(0);}  15%{transform:translateX(-8px);}
+  30% {transform:translateX(8px);}45%{transform:translateX(-6px);}
+  60% {transform:translateX(6px);}75%{transform:translateX(-3px);}
+  100%{transform:translateX(0);}}
+
+/* Unsold badge on pool item — now handled by unsold-pot-item class */
+.no-players{text-align:center;max-width:320px;}
+.no-players-icon{font-size:3.5rem;margin-bottom:14px;opacity:0.5;}
+.no-players h2{font-family:var(--font-d);font-size:1.6rem;letter-spacing:0.1em;color:var(--gold);margin-bottom:8px;}
+.no-players p{color:var(--muted);font-size:0.84rem;line-height:1.6;margin-bottom:18px;}
+.go-setup-btn{font-family:var(--font-d);font-size:1rem;letter-spacing:0.12em;
+  background:linear-gradient(135deg,var(--gold),#f5cc6a);color:#000;border:none;
+  padding:12px 32px;border-radius:50px;cursor:pointer;box-shadow:0 0 20px var(--gold-glow);}
+
+/* Overlay */
+.sold-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.sold-overlay.show{opacity:1;pointer-events:all;}
+.sold-card{text-align:center;animation:soldPop 0.5s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes soldPop{from{transform:scale(0.5) rotate(-10deg);opacity:0;}to{transform:scale(1) rotate(0);opacity:1;}}
+.sold-headline{font-family:var(--font-d);font-size:6.5rem;line-height:1;letter-spacing:0.1em;}
+.sold-detail{font-family:var(--font-d);font-size:1.5rem;color:var(--muted);letter-spacing:0.2em;margin-top:6px;}
+.sold-to{font-family:var(--font-d);font-size:2rem;letter-spacing:0.15em;margin-top:14px;}
+.sold-price-tag{font-family:var(--font-m);font-size:1.6rem;color:var(--green);margin-top:6px;}
+
+@keyframes rippleOut{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(3.5);opacity:0;}}
+.bid-ripple{position:fixed;width:80px;height:80px;border-radius:50%;pointer-events:none;z-index:50;
+  animation:rippleOut 0.7s ease-out forwards;margin-left:-40px;margin-top:-40px;}
+.bid-ripple.r1{background:rgba(255,68,68,0.3);}
+.bid-ripple.r2{background:rgba(59,158,255,0.3);}
+/* Download lineup button */
+/* ── Panel action buttons — unified card style ── */
+.action-btn{
+  display:flex;align-items:center;gap:11px;
+  width:100%;padding:11px 13px;border-radius:12px;
+  border:1px solid var(--border);background:var(--surface);
+  cursor:pointer;transition:all 0.22s;text-align:left;}
+.action-btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+.action-btn:active{transform:translateY(0);}
+.ab-icon{width:34px;height:34px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:0.95rem;}
+.ab-body{flex:1;min-width:0;}
+.ab-label{font-family:var(--font-d);font-size:0.88rem;letter-spacing:0.14em;display:block;line-height:1.2;}
+.ab-sub{font-size:0.62rem;color:var(--muted);letter-spacing:0.04em;display:block;margin-top:2px;}
+.ab-right{flex-shrink:0;font-size:0.7rem;color:var(--muted);transition:transform 0.2s;}
+.action-btn:hover .ab-right{transform:translateX(2px);}
+.action-btn.ab-green{border-color:rgba(0,232,122,0.2);color:var(--green);}
+.action-btn.ab-green .ab-icon{background:rgba(0,232,122,0.1);}
+.action-btn.ab-green:hover{border-color:rgba(0,232,122,0.4);box-shadow:0 0 12px rgba(0,232,122,0.1);}
+.action-btn.ab-gold{border-color:rgba(232,184,75,0.2);color:var(--gold);}
+.action-btn.ab-gold .ab-icon{background:rgba(232,184,75,0.12);}
+.action-btn.ab-gold:hover{border-color:rgba(232,184,75,0.45);box-shadow:0 0 12px rgba(232,184,75,0.12);}
+.action-btn.ab-orange{border-color:rgba(249,115,22,0.2);color:#fb923c;}
+.action-btn.ab-orange .ab-icon{background:rgba(249,115,22,0.1);}
+.action-btn.ab-orange:hover{border-color:rgba(249,115,22,0.4);box-shadow:0 0 12px rgba(249,115,22,0.1);}
+.action-btn.ab-purple{border-color:rgba(192,132,252,0.2);color:#c084fc;}
+.action-btn.ab-purple .ab-icon{background:rgba(192,132,252,0.1);}
+.action-btn.ab-purple:hover{border-color:rgba(192,132,252,0.4);box-shadow:0 0 12px rgba(192,132,252,0.1);}
+.ab-badge{background:var(--red);color:#fff;font-family:var(--font-m);font-size:0.58rem;
+  padding:2px 6px;border-radius:8px;display:none;}
+.ab-badge.visible{display:inline;}
+/* Keep history-count-badge for ID reference */
+#history-count-badge{background:rgba(192,132,252,0.15);border:1px solid rgba(192,132,252,0.25);
+  color:#c084fc;font-family:var(--font-m);font-size:0.58rem;padding:2px 6px;border-radius:8px;}
+.manual-modal{position:fixed;inset:0;z-index:160;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.manual-modal.show{opacity:1;pointer-events:all;}
+.manual-card{background:#0f1018;border:1px solid rgba(232,184,75,0.3);border-radius:20px;
+  padding:28px 32px;min-width:360px;max-width:420px;width:90vw;display:flex;flex-direction:column;gap:16px;
+  animation:capPop 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+.manual-card h3{font-family:var(--font-d);font-size:1.4rem;letter-spacing:0.15em;color:var(--gold);}
+.manual-field{display:flex;flex-direction:column;gap:6px;}
+.manual-field label{font-size:0.72rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);}
+.manual-field input,.manual-field select{
+  background:rgba(255,255,255,0.05);border:1px solid var(--border-bright);
+  border-radius:9px;padding:10px 12px;color:var(--white);font-family:var(--font-b);
+  font-size:0.9rem;outline:none;transition:border-color 0.2s;width:100%;}
+.manual-field input:focus,.manual-field select:focus{border-color:var(--gold);}
+.manual-field select option{background:#111;color:var(--white);}
+.manual-team-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.manual-team-btn{padding:12px;border-radius:10px;border:1px solid;font-family:var(--font-d);
+  font-size:1rem;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;background:transparent;}
+.manual-team-btn.t1b{border-color:rgba(255,68,68,0.4);color:var(--red);}
+.manual-team-btn.t1b.selected{background:rgba(255,68,68,0.2);box-shadow:0 0 14px rgba(255,68,68,0.2);}
+.manual-team-btn.t2b{border-color:rgba(59,158,255,0.4);color:var(--blue);}
+.manual-team-btn.t2b.selected{background:rgba(59,158,255,0.2);box-shadow:0 0 14px rgba(59,158,255,0.2);}
+.manual-save-btn{font-family:var(--font-d);font-size:1rem;letter-spacing:0.15em;
+  background:linear-gradient(135deg,var(--gold),#f5cc6a);color:#000;border:none;
+  padding:12px;border-radius:10px;cursor:pointer;transition:transform 0.15s;}
+.manual-save-btn:hover{transform:scale(1.03);}
+.manual-cancel-btn{background:none;border:1px solid var(--border);color:var(--muted);
+  font-family:var(--font-b);font-size:0.8rem;padding:8px;border-radius:8px;cursor:pointer;transition:all 0.2s;}
+.manual-cancel-btn:hover{border-color:var(--border-bright);color:var(--white);}
+.manual-note{font-size:0.72rem;color:var(--muted);line-height:1.5;padding:8px 10px;
+  background:rgba(255,255,255,0.03);border-radius:8px;border-left:2px solid var(--gold);}
+
+/* ── AUCTION HISTORY MODAL ── */
+.history-modal{position:fixed;inset:0;z-index:210;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.92);backdrop-filter:blur(16px);opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.history-modal.show{opacity:1;pointer-events:all;}
+.history-modal-inner{background:#0d0e14;border:1px solid var(--border-bright);border-radius:20px;
+  padding:24px;width:min(700px,94vw);max-height:88vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:16px;}
+.history-modal-header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.history-modal-title{font-family:var(--font-d);font-size:1.3rem;letter-spacing:0.2em;color:#c084fc;}
+.history-empty{text-align:center;color:var(--muted);font-size:0.85rem;
+  letter-spacing:0.1em;padding:40px 0;}
+.history-entry{background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;transition:border-color 0.2s;}
+.history-entry:hover{border-color:var(--border-bright);}
+.history-entry-header{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;
+  background:rgba(255,255,255,0.02);}
+.history-entry-header:hover{background:rgba(255,255,255,0.04);}
+.history-date{font-family:var(--font-m);font-size:0.72rem;color:var(--muted);}
+.history-entry-title{font-family:var(--font-d);font-size:1.1rem;letter-spacing:0.08em;flex:1;}
+.history-chips{display:flex;gap:6px;margin-left:auto;}
+.history-chip{font-family:var(--font-m);font-size:0.6rem;padding:2px 8px;
+  border-radius:10px;background:var(--surface-2);border:1px solid var(--border);}
+.history-chip.sold{color:var(--green);border-color:rgba(0,232,122,0.2);}
+.history-chip.record{color:var(--gold);border-color:rgba(232,184,75,0.2);}
+.history-toggle-icon{color:var(--muted);font-size:0.75rem;transition:transform 0.25s;flex-shrink:0;}
+.history-entry.open .history-toggle-icon{transform:rotate(180deg);}
+.history-entry-body{display:none;padding:0 16px 16px;}
+.history-entry.open .history-entry-body{display:block;}
+.history-teams-row{display:flex;gap:12px;margin-top:12px;}
+.history-team{flex:1;background:rgba(255,255,255,0.02);border-radius:10px;padding:12px;}
+.history-team-name{font-family:var(--font-d);font-size:1rem;letter-spacing:0.08em;margin-bottom:6px;}
+.history-ht1 .history-team-name{color:var(--red);}
+.history-ht2 .history-team-name{color:var(--blue);}
+.history-player-line{display:flex;justify-content:space-between;
+  font-size:0.75rem;padding:3px 0;border-bottom:1px solid var(--border);}
+.history-player-line:last-child{border-bottom:none;}
+.history-player-line span:last-child{font-family:var(--font-m);font-size:0.68rem;color:var(--green);}
+.history-del-btn{background:none;border:1px solid rgba(255,68,68,0.25);color:rgba(255,68,68,0.5);
+  font-size:0.7rem;padding:3px 10px;border-radius:6px;cursor:pointer;transition:all 0.2s;font-family:var(--font-b);}
+.history-del-btn:hover{background:rgba(255,68,68,0.12);color:var(--red);border-color:rgba(255,68,68,0.5);}
+
+/* Lineup modal */
+.lineup-modal{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.92);backdrop-filter:blur(16px);opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.lineup-modal.show{opacity:1;pointer-events:all;}
+.lineup-modal-inner{background:#0d0e14;border:1px solid rgba(255,255,255,0.12);border-radius:20px;
+  padding:24px;max-width:95vw;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:18px;}
+.lineup-modal-header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.lineup-modal-title{font-family:var(--font-d);font-size:1.3rem;letter-spacing:0.2em;color:var(--gold);}
+.lineup-modal-actions{display:flex;gap:10px;}
+.modal-close-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:0.78rem;
+  padding:6px 14px;border-radius:8px;cursor:pointer;font-family:var(--font-b);transition:all 0.2s;}
+.modal-close-btn:hover{border-color:var(--border-bright);color:var(--white);}
+.modal-dl-btn{
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg,var(--gold) 0%,#f5cc6a 100%);
+  color:#000;border:none;font-family:var(--font-d);font-size:0.95rem;
+  letter-spacing:0.15em;padding:10px 24px;border-radius:10px;cursor:pointer;
+  box-shadow:0 4px 16px rgba(232,184,75,0.35);
+  transition:transform 0.15s,box-shadow 0.15s;}
+.modal-dl-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(232,184,75,0.5);}
+
+#lineup-canvas-area{display:flex;gap:20px;}
+.lineup-team-card{flex:1;background:linear-gradient(160deg,#0f1018,#080910);
+  border-radius:16px;padding:18px;min-width:260px;}
+.ltc-t1{border-top:3px solid #ff4444;}
+.ltc-t2{border-top:3px solid #3b9eff;}
+.ltc-header{text-align:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.ltc-team-name{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:0.15em;}
+.ltc-t1 .ltc-team-name{color:#ff4444;}
+.ltc-t2 .ltc-team-name{color:#3b9eff;}
+.ltc-stats{display:flex;gap:8px;justify-content:center;margin-top:6px;}
+.ltc-stat{font-family:'Space Mono',monospace;font-size:0.66rem;color:rgba(255,255,255,0.4);
+  background:rgba(255,255,255,0.05);border-radius:6px;padding:2px 8px;}
+.ltc-stat span{color:#f0f0f0;font-weight:700;}
+.ltc-players{display:flex;flex-direction:column;gap:5px;}
+.ltc-player-row{display:flex;align-items:center;gap:8px;padding:7px 9px;
+  background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:9px;}
+.ltc-player-img{width:40px;height:40px;border-radius:7px;object-fit:cover;object-position:top;
+  background:rgba(255,255,255,0.06);flex-shrink:0;}
+.ltc-player-ph{width:40px;height:40px;border-radius:7px;background:rgba(255,255,255,0.06);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.ltc-player-info{flex:1;min-width:0;}
+.ltc-player-name{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;letter-spacing:0.05em;
+  color:#f0f0f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ltc-player-cat{font-family:'Space Mono',monospace;font-size:0.58rem;color:rgba(255,255,255,0.35);margin-top:1px;}
+.ltc-player-price{font-family:'Space Mono',monospace;font-size:0.78rem;color:#00e87a;font-weight:700;flex-shrink:0;}
+.ltc-empty{text-align:center;color:rgba(255,255,255,0.2);font-family:'Bebas Neue',sans-serif;
+  font-size:0.85rem;letter-spacing:0.15em;padding:24px 0;}
+
+/* ══ BUNDLE 2 CSS ══════════════════════════════════════ */
+
+/* Editable team name */
+.team-name-wrap{display:flex;align-items:center;gap:6px;}
+.team-name-input{
+  font-family:var(--font-d);font-size:1.2rem;letter-spacing:0.1em;
+  background:none;border:none;border-bottom:1px dashed rgba(255,255,255,0.15);
+  color:var(--white);outline:none;width:140px;cursor:pointer;
+  transition:border-color 0.2s;}
+.team-name-input:focus{border-bottom-color:var(--gold);}
+.team-name-input.t1c{color:var(--red);}
+.team-name-input.t2c{color:var(--blue);}
+
+/* Bid history feed */
+.bid-history{
+  width:100%;max-width:500px;
+  display:flex;flex-direction:column;gap:4px;
+  max-height:80px;overflow:hidden;}
+.bid-entry{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--font-m);font-size:0.7rem;
+  padding:4px 10px;border-radius:7px;
+  background:var(--surface);border:1px solid var(--border);
+  animation:bidSlideIn 0.25s ease;}
+@keyframes bidSlideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.bid-entry .be-team{font-weight:700;min-width:60px;}
+.bid-entry .be-arrow{color:var(--muted);}
+.bid-entry .be-price{color:var(--green);margin-left:auto;}
+.bid-entry.t1-entry .be-team{color:var(--red);}
+.bid-entry.t2-entry .be-team{color:var(--blue);}
+.bid-entry.latest{border-color:rgba(232,184,75,0.3);background:rgba(232,184,75,0.06);}
+
+/* Pot progress bars on selector buttons */
+.pot-sel-btn{position:relative;overflow:hidden;}
+.pot-progress{
+  position:absolute;bottom:0;left:0;height:3px;
+  border-radius:0 0 0 12px;
+  transition:width 0.4s ease;}
+.pot-sel-btn.bat  .pot-progress{background:#3b9eff;}
+.pot-sel-btn.bowl .pot-progress{background:#ff4444;}
+.pot-sel-btn.ar   .pot-progress{background:#00e87a;}
+.pot-sel-btn.wk   .pot-progress{background:#c084fc;}
+.pot-sel-btn.unsold .pot-progress{background:#f97316;}
+
+/* Auction summary overlay */
+.summary-overlay{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.96);backdrop-filter:blur(20px);
+  opacity:0;pointer-events:none;transition:opacity 0.4s;}
+.summary-overlay.show{opacity:1;pointer-events:all;}
+.summary-inner{
+  background:#0d0e14;border:1px solid var(--border-bright);
+  border-radius:22px;padding:28px 32px;
+  max-width:92vw;max-height:90vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:20px;
+  animation:soldPop 0.5s cubic-bezier(0.34,1.4,0.64,1);}
+.summary-title{
+  font-family:var(--font-d);font-size:2rem;letter-spacing:0.2em;
+  background:linear-gradient(135deg,var(--gold),#fff,var(--gold));
+  background-size:200% auto;-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmer 3s linear infinite;text-align:center;}
+.summary-stats{
+  display:flex;justify-content:center;gap:16px;flex-wrap:wrap;}
+.summary-stat{
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:12px;padding:12px 20px;text-align:center;}
+.summary-stat-val{
+  font-family:var(--font-d);font-size:1.6rem;color:var(--gold);}
+.summary-stat-lbl{
+  font-size:0.68rem;letter-spacing:0.15em;color:var(--muted);
+  text-transform:uppercase;margin-top:2px;}
+.summary-teams{display:flex;gap:16px;}
+.summary-team{
+  flex:1;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:16px;}
+.summary-team.st1{border-top:3px solid var(--red);}
+.summary-team.st2{border-top:3px solid var(--blue);}
+.summary-team-name{
+  font-family:var(--font-d);font-size:1.3rem;letter-spacing:0.1em;margin-bottom:10px;}
+.st1 .summary-team-name{color:var(--red);}
+.st2 .summary-team-name{color:var(--blue);}
+.summary-player-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:0.8rem;}
+.summary-player-row:last-child{border-bottom:none;}
+.summary-p-name{color:rgba(255,255,255,0.8);}
+.summary-p-price{font-family:var(--font-m);font-size:0.72rem;color:var(--green);}
+.summary-actions{display:flex;gap:10px;justify-content:center;}
+.summary-dl-btn{
+  font-family:var(--font-d);font-size:1rem;letter-spacing:0.15em;
+  background:linear-gradient(135deg,var(--gold),#f5cc6a);color:#000;
+  border:none;padding:11px 28px;border-radius:50px;cursor:pointer;}
+.summary-close-btn{
+  font-family:var(--font-d);font-size:1rem;letter-spacing:0.15em;
+  background:none;border:1px solid var(--border);color:var(--muted);
+  padding:11px 28px;border-radius:50px;cursor:pointer;transition:all 0.2s;}
+.summary-close-btn:hover{border-color:var(--border-bright);color:var(--white);}
+
+/* ══ END BUNDLE 2 CSS ══════════════════════════════════ */
+
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- LEFT: TEAM 1 -->
+<canvas id="particles-canvas"></canvas>
+<canvas id="confetti-canvas"></canvas>
+<div class="record-flash" id="record-flash">🏆 &nbsp; RECORD SALE!</div>
+<div class="panel left">
+  <div class="panel-label">Team 1 Roster</div>
+  <div class="team-card t1" id="card-1">
+    <div class="bidder-badge">⚡ LEADING BID</div>
+    <div class="team-name-wrap">
+      <input class="team-name-input t1c" id="tname-1" value="TEAM 1"
+        maxlength="18" spellcheck="false"
+        onchange="saveTeamName(1,this.value)" oninput="applyTeamName(1,this.value)">
+    </div>
+    <div class="team-budget">₹<span id="budget-1">100.0</span> Cr</div>
+    <div id="captain-display-1" class="captain-section" onclick="openCaptainModal(1)" style="cursor:pointer;">
+      <div class="captain-img-ph" id="cap-img-wrap-1">👑</div>
+      <div class="captain-info">
+        <div class="captain-label">CAPTAIN</div>
+        <div class="captain-name" id="cap-name-1">Tap to set captain</div>
+      </div>
+      <button class="captain-edit" onclick="event.stopPropagation();openCaptainModal(1)"><i class="fas fa-pen"></i></button>
+    </div>
+    <div class="team-meta">
+      <div class="meta-pill">Players: <span id="count-1">0</span></div>
+      <div class="meta-pill">Spent: ₹<span id="spent-1">0.0</span>Cr</div>
+    </div>
+    <div class="max-bid-pill">Max bid: ₹<span id="maxbid-1">—</span> Cr</div>
+    <div class="budget-bar-wrap">
+      <div class="budget-bar-label">
+        <span class="used-lbl">Spent: ₹<span id="bar-spent-1">0.0</span>Cr</span>
+        <span>₹<span id="bar-left-1">100.0</span>Cr left</span>
+      </div>
+      <div class="budget-bar-track"><div class="budget-bar-fill" id="bar-fill-1" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="player-list" id="list-1"></div>
+  </div>
+  <button class="back-btn" onclick="window.location.href='squad-builder.html'">
+    <i class="fas fa-arrow-left"></i> Back to Squad Builder
+  </button>
+  <button class="action-btn ab-green" id="sync-btn" onclick="syncNewPlayers()">
+    <div class="ab-icon"><i class="fas fa-sync-alt"></i></div>
+    <div class="ab-body">
+      <span class="ab-label">SYNC PLAYERS</span>
+      <span class="ab-sub" id="sync-status-text">Add new players from squad builder</span>
+    </div>
+    <span class="ab-badge" id="sync-badge">0</span>
+  </button>
+  <button class="action-btn ab-orange" onclick="openManualAdd()">
+    <div class="ab-icon"><i class="fas fa-plus-circle"></i></div>
+    <div class="ab-body">
+      <span class="ab-label">MANAGE PLAYER</span>
+      <span class="ab-sub">Record bid or send to unsold</span>
+    </div>
+    <i class="fas fa-chevron-right ab-right"></i>
+  </button>
+  <button class="action-btn ab-gold" onclick="openLineup()">
+    <div class="ab-icon"><i class="fas fa-download"></i></div>
+    <div class="ab-body">
+      <span class="ab-label">DOWNLOAD LINEUP</span>
+      <span class="ab-sub">View & save team rosters</span>
+    </div>
+    <i class="fas fa-chevron-right ab-right"></i>
+  </button>
+  <button class="action-btn ab-purple" onclick="openHistory()">
+    <div class="ab-icon"><i class="fas fa-history"></i></div>
+    <div class="ab-body">
+      <span class="ab-label">AUCTION HISTORY</span>
+      <span class="ab-sub">Past auction results</span>
+    </div>
+    <span id="history-count-badge">0</span>
+  </button>
+</div>
+
+<!-- CENTER -->
+<div class="stage">
+  <div class="top-bar">
+    <span class="auction-title" id="pot-label">POT</span>
+    <div class="timer-wrap">
+      <button class="gavel-btn" id="hammer" onclick="strikeGavel()"><i class="fas fa-gavel"></i></button>
+      <div class="timer-display safe" id="timer">2:00</div>
+    </div>
+    <span class="auction-title" id="round-label">ROUND 1</span>
+  </div>
+
+  <div class="no-players" id="no-players-screen" style="display:none;flex-direction:column;align-items:center;">
+    <div class="no-players-icon">📋</div>
+    <h2>NO PLAYERS FOUND</h2>
+    <p>Go to the Squad Builder to add players to the pots first.</p>
+    <button class="go-setup-btn" onclick="window.location.href='squad-builder.html'">
+      <i class="fas fa-arrow-left"></i> &nbsp; GO TO SQUAD BUILDER
+    </button>
+  </div>
+
+  <div class="start-screen" id="start-screen" style="display:none;">
+    <div class="auction-headline">LIVE<br>AUCTION</div>
+    <div class="start-hint">Pick a pot to reveal a player</div>
+    <div class="pot-selector" id="pot-selector"></div>
+  </div>
+
+  <div class="player-stage" id="player-stage">
+    <div class="player-showcase">
+      <div class="img-frame">
+        <div class="img-ring" id="img-ring"></div>
+        <div class="img-ring-mask"></div>
+        <img src="" id="p-img" class="p-image"
+          onerror="this.style.display='none';document.getElementById('p-ph').style.display='flex'">
+        <div class="p-image-placeholder" id="p-ph" style="display:none;">👤</div>
+      </div>
+      <div class="player-info">
+        <div class="p-role-badge" id="p-role-badge"></div>
+        <div class="p-name" id="p-name"></div>
+        <div class="base-hint">Base Price: ₹<span id="p-base">2.0</span> Cr</div>
+        <div class="price-label">CURRENT BID</div>
+        <div class="price-display">
+          <div class="price-value" id="p-price">0.0</div>
+          <div class="price-unit">Cr</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bid-section">
+      <div class="bid-row">
+        <button class="bid-btn t1" id="bid-t1"><i class="fas fa-hand-paper"></i> TEAM 1</button>
+        <span class="vs-divider">VS</span>
+        <button class="bid-btn t2" id="bid-t2">TEAM 2 <i class="fas fa-hand-paper"></i></button>
+      </div>
+      <div class="war-mode-banner" id="war-banner">
+        <span class="war-t1">TEAM 1</span>
+        <span class="war-vs">⚔ WAR MODE 🔥</span>
+        <span class="war-t2">TEAM 2</span>
+      </div>
+      <div class="inc-row">
+        <button class="inc-btn" onclick="inc(0.1)">+0.1</button>
+        <button class="inc-btn" onclick="inc(0.5)">+0.5</button>
+        <button class="inc-btn" onclick="inc(1.0)">+1 Cr</button>
+        <button class="inc-btn" onclick="inc(2.0)">+2 Cr</button>
+        <button class="inc-btn" onclick="inc(5.0)">+5 Cr</button>
+      </div>
+      <div class="dec-row">
+        <button class="dec-btn" onclick="dec(0.1)">−0.1</button>
+        <button class="dec-btn" onclick="dec(0.5)">−0.5</button>
+        <button class="dec-btn" onclick="dec(1.0)">−1 Cr</button>
+        <button class="dec-btn" onclick="dec(2.0)">−2 Cr</button>
+        <button class="dec-btn" onclick="dec(5.0)">−5 Cr</button>
+      </div>
+      <div class="bid-history" id="bid-history"></div>
+      <div class="team-warn" id="team-warn">
+        <i class="fas fa-exclamation-triangle"></i> SELECT A TEAM FIRST BEFORE RAISING BID
+      </div>
+      <button class="sold-btn" onclick="confirmSold()">🔨 &nbsp; SOLD</button>
+      <button class="unsold-btn" onclick="markUnsold()">MARK UNSOLD</button>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT: POOL + TEAM 2 -->
+<div class="panel right">
+  <div class="panel-label">Player Pool</div>
+  <div class="pool-tabs" id="pool-tabs"></div>
+  <div class="pool-scroll" id="pool-scroll"></div>
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;">
+    <div class="team-card t2" id="card-2">
+      <div class="bidder-badge">⚡ LEADING BID</div>
+      <div class="team-name-wrap">
+        <input class="team-name-input t2c" id="tname-2" value="TEAM 2"
+          maxlength="18" spellcheck="false"
+          onchange="saveTeamName(2,this.value)" oninput="applyTeamName(2,this.value)">
+      </div>
+      <div class="team-budget">₹<span id="budget-2">100.0</span> Cr</div>
+      <div id="captain-display-2" class="captain-section" onclick="openCaptainModal(2)" style="cursor:pointer;">
+        <div class="captain-img-ph" id="cap-img-wrap-2">👑</div>
+        <div class="captain-info">
+          <div class="captain-label">CAPTAIN</div>
+          <div class="captain-name" id="cap-name-2">Tap to set captain</div>
+        </div>
+        <button class="captain-edit" onclick="event.stopPropagation();openCaptainModal(2)"><i class="fas fa-pen"></i></button>
+      </div>
+      <div class="team-meta">
+        <div class="meta-pill">Players: <span id="count-2">0</span></div>
+        <div class="meta-pill">Spent: ₹<span id="spent-2">0.0</span>Cr</div>
+      </div>
+      <div class="max-bid-pill">Max bid: ₹<span id="maxbid-2">—</span> Cr</div>
+      <div class="budget-bar-wrap">
+        <div class="budget-bar-label">
+          <span class="used-lbl">Spent: ₹<span id="bar-spent-2">0.0</span>Cr</span>
+          <span>₹<span id="bar-left-2">100.0</span>Cr left</span>
+        </div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" id="bar-fill-2" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div class="player-list" id="list-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CAPTAIN MODAL -->
+<div class="captain-modal" id="captain-modal">
+  <div class="captain-card">
+    <h3>SET CAPTAIN — <span id="cap-modal-team">TEAM 1</span></h3>
+    <div class="captain-field">
+      <label>Captain Name</label>
+      <input type="text" id="cap-input-name" placeholder="e.g. Virat Kohli" autocomplete="off">
+    </div>
+    <div class="captain-field">
+      <label>Captain Photo</label>
+      <div class="captain-drop" id="cap-drop"
+           ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
+           ondragleave="this.style.borderColor=''"
+           ondrop="capHandleDrop(event)">
+        <input type="file" accept="image/*" onchange="capHandleFile(event)">
+        <img id="cap-preview-img" src="">
+        <div class="cdrop-hint" id="cap-drop-hint">
+          <i class="fas fa-camera"></i>
+          <span>Drop photo or click to browse</span>
+        </div>
+      </div>
+    </div>
+    <button class="captain-save-btn" onclick="saveCaptain()">
+      <i class="fas fa-check"></i> &nbsp; SAVE CAPTAIN
+    </button>
+    <button class="captain-cancel" onclick="closeCaptainModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- MANUAL ADD COMPLETED BID MODAL -->
+<div class="manual-modal" id="manual-modal">
+  <div class="manual-card">
+    <!-- Tab switcher -->
+    <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;flex-shrink:0;">
+      <button id="tab-add" onclick="switchManualTab('add')"
+        style="flex:1;padding:9px;font-family:var(--font-d);font-size:0.82rem;letter-spacing:0.1em;border:none;cursor:pointer;transition:all 0.2s;background:rgba(232,184,75,0.12);color:var(--gold);">
+        ➕ ADD / UNSOLD
+      </button>
+      <button id="tab-modify" onclick="switchManualTab('modify')"
+        style="flex:1;padding:9px;font-family:var(--font-d);font-size:0.82rem;letter-spacing:0.1em;border:none;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--muted);">
+        ✏️ MODIFY ENTRY
+      </button>
+    </div>
+
+    <!-- ADD TAB -->
+    <div id="manual-tab-add">
+      <div class="manual-note">
+        Record a completed bid or mark a player as unsold. Both remove them from the randomizer.
+      </div>
+      <div class="manual-field">
+        <label>Player</label>
+        <select id="manual-player-select">
+          <option value="">— Select Player —</option>
+        </select>
+      </div>
+      <div class="manual-field">
+        <label>Sold To (for completed bids)</label>
+        <div class="manual-team-btns">
+          <button class="manual-team-btn t1b" id="manual-t1-btn" onclick="selectManualTeam(1)">
+            <span id="manual-t1-label">TEAM 1</span>
+          </button>
+          <button class="manual-team-btn t2b" id="manual-t2-btn" onclick="selectManualTeam(2)">
+            <span id="manual-t2-label">TEAM 2</span>
+          </button>
+        </div>
+      </div>
+      <div class="manual-field">
+        <label>Sold Price (Cr)</label>
+        <input type="number" id="manual-price" min="0.5" step="0.5" placeholder="e.g. 4.5">
+      </div>
+      <button class="manual-save-btn" onclick="saveManualBid()">
+        <i class="fas fa-check"></i> &nbsp; CONFIRM SOLD
+      </button>
+      <button class="manual-save-btn" style="background:linear-gradient(135deg,#f97316,#fb923c);margin-top:-6px;" onclick="saveManualUnsold()">
+        <i class="fas fa-arrow-right"></i> &nbsp; SEND TO UNSOLD POOL
+      </button>
+    </div>
+
+    <!-- MODIFY TAB -->
+    <div id="manual-tab-modify" style="display:none;">
+      <div class="manual-note">
+        Select a sold player to correct their team or price. The budget will be recalculated automatically.
+      </div>
+      <div class="manual-field">
+        <label>Sold Player to Modify</label>
+        <select id="modify-player-select" onchange="prefillModify()">
+          <option value="">— Select Sold Player —</option>
+        </select>
+      </div>
+      <div class="manual-field">
+        <label>Change Team To</label>
+        <div class="manual-team-btns">
+          <button class="manual-team-btn t1b" id="modify-t1-btn" onclick="selectModifyTeam(1)">
+            <span id="modify-t1-label">TEAM 1</span>
+          </button>
+          <button class="manual-team-btn t2b" id="modify-t2-btn" onclick="selectModifyTeam(2)">
+            <span id="modify-t2-label">TEAM 2</span>
+          </button>
+        </div>
+      </div>
+      <div class="manual-field">
+        <label>Correct Price (Cr)</label>
+        <input type="number" id="modify-price" min="0.5" step="0.5" placeholder="e.g. 4.5">
+      </div>
+      <button class="manual-save-btn" onclick="saveModifyEntry()">
+        <i class="fas fa-pen"></i> &nbsp; SAVE CHANGES
+      </button>
+      <button class="manual-save-btn" style="background:linear-gradient(135deg,#ff4444,#ff6b6b);margin-top:-6px;" onclick="removeEntry()">
+        <i class="fas fa-times"></i> &nbsp; REMOVE FROM ROSTER
+      </button>
+    </div>
+
+    <button class="manual-cancel-btn" onclick="closeManualAdd()">Cancel</button>
+  </div>
+</div>
+
+<!-- BUDGET CAP MODAL -->
+<div class="cap-modal" id="cap-modal">
+  <div class="cap-card">
+    <div class="cap-icon">⚠️</div>
+    <div class="cap-title" id="cap-title">BUDGET LIMIT REACHED</div>
+    <div class="cap-body" id="cap-body"></div>
+    <button class="cap-ok" onclick="document.getElementById('cap-modal').classList.remove('show')">GOT IT</button>
+  </div>
+</div>
+
+<!-- REVEAL OVERLAY — full sequence -->
+<div class="reveal-overlay" id="reveal-overlay">
+
+  <!-- Phase 1: "The next player is..." -->
+  <div class="rv-phase" id="rv-phase1">
+    <div class="rv-eyebrow">GET READY</div>
+    <div class="rv-headline">The next<br>player is...</div>
+  </div>
+
+  <!-- Phase 2: Slot machine drum -->
+  <div class="rv-phase" id="rv-phase2" style="display:none;">
+    <div class="rv-eyebrow">PICKING FROM THE POT</div>
+    <div class="slot-drum" id="slot-drum">
+      <div class="slot-highlight"></div>
+      <div class="slot-reel" id="slot-reel"></div>
+    </div>
+    <div class="rv-category" id="rv-category"></div>
+  </div>
+
+  <!-- Phase 3: Name reveal -->
+  <div class="rv-phase" id="rv-phase3" style="display:none;">
+    <div class="rv-eyebrow" id="rv-next-label">NEXT UP FOR AUCTION</div>
+    <div class="rv-big-name" id="rv-big-name"></div>
+    <div class="rv-category" id="rv-category3"></div>
+  </div>
+
+  <!-- Phase 4: Countdown -->
+  <div class="rv-phase" id="rv-phase4" style="display:none;">
+    <div class="rv-eyebrow">BIDDING STARTS IN</div>
+    <div class="rv-countdown" id="rv-countdown">3</div>
+  </div>
+
+</div>
+
+<!-- OVERLAY -->
+<div class="sold-overlay" id="sold-overlay">
+  <div class="sold-card">
+    <div class="sold-headline" id="sold-hl">SOLD!</div>
+    <div class="sold-detail" id="sold-pname"></div>
+    <div class="sold-to" id="sold-to"></div>
+    <div class="sold-price-tag" id="sold-pr"></div>
+  </div>
+</div>
+
+<!-- LINEUP MODAL -->
+<div class="lineup-modal" id="lineup-modal">
+  <div class="lineup-modal-inner">
+    <div class="lineup-modal-header">
+      <div class="lineup-modal-title">⚡ FINAL LINEUPS</div>
+      <div class="lineup-modal-actions">
+        <button class="modal-dl-btn" onclick="downloadLineup()">
+          <i class="fas fa-download"></i> SAVE AS IMAGE
+        </button>
+        <button class="modal-close-btn" onclick="closeLineup()">✕ CLOSE</button>
+      </div>
+    </div>
+    <div id="lineup-canvas-area"></div>
+  </div>
+</div>
+
+<!-- AUCTION HISTORY MODAL -->
+<div class="history-modal" id="history-modal">
+  <div class="history-modal-inner">
+    <div class="history-modal-header">
+      <div class="history-modal-title">📜 AUCTION HISTORY</div>
+      <button class="modal-close-btn" onclick="closeHistory()">✕ CLOSE</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- AUCTION SUMMARY OVERLAY -->
+<div class="summary-overlay" id="summary-overlay">
+  <div class="summary-inner" id="summary-inner">
+    <div class="summary-title">🏆 AUCTION COMPLETE</div>
+    <div class="summary-stats" id="summary-stats"></div>
+    <div class="summary-teams" id="summary-teams"></div>
+    <div class="summary-actions">
+      <button class="summary-dl-btn" onclick="downloadLineup()">
+        <i class="fas fa-download"></i> SAVE LINEUP
+      </button>
+      <button class="summary-close-btn" onclick="document.getElementById('summary-overlay').classList.remove('show')">
+        CLOSE
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+const colorPalette = [
+  { clr:'#3b9eff', dot:'#3b9eff', bg:'rgba(59,158,255,0.15)', hoverBg:'rgba(59,158,255,0.15)' },    // Blue
+  { clr:'#ff4444', dot:'#ff4444', bg:'rgba(255,68,68,0.15)', hoverBg:'rgba(255,68,68,0.15)' },      // Red
+  { clr:'#00e87a', dot:'#00e87a', bg:'rgba(0,232,122,0.15)', hoverBg:'rgba(0,232,122,0.15)' },     // Green
+  { clr:'#c084fc', dot:'#c084fc', bg:'rgba(192,132,252,0.15)', hoverBg:'rgba(192,132,252,0.15)' },  // Purple
+  { clr:'#fbbf24', dot:'#fbbf24', bg:'rgba(251,191,36,0.15)', hoverBg:'rgba(251,191,36,0.15)' },    // Amber
+  { clr:'#06b6d4', dot:'#06b6d4', bg:'rgba(6,182,212,0.15)', hoverBg:'rgba(6,182,212,0.15)' },      // Cyan
+  { clr:'#ec4899', dot:'#ec4899', bg:'rgba(236,72,153,0.15)', hoverBg:'rgba(236,72,153,0.15)' },    // Pink
+  { clr:'#f97316', dot:'#f97316', bg:'rgba(249,115,22,0.15)', hoverBg:'rgba(249,115,22,0.15)' },    // Orange
+];
+
+// Build catMeta dynamically based on allPlayers
+function initCatMeta(){
+  const defaultCategories = {
+    bat:    { label:'Batsman',        icon:'🏏', clr:'#3b9eff', dot:'#3b9eff' },
+    bowl:   { label:'Bowler',         icon:'🏐', clr:'#ff4444', dot:'#ff4444' },
+    ar:     { label:'All-Rounder',    icon:'⚡', clr:'#00e87a', dot:'#00e87a' },
+    '1mp':  { label:'1-Match Player', icon:'🌟', clr:'#c084fc', dot:'#c084fc' },
+    unsold: { label:'Unsold',         icon:'🔄', clr:'#f97316', dot:'#f97316' },
+  };
+  
+  // Find all unique categories in allPlayers
+  const allCategories = new Set(allPlayers.map(p => p.cat));
+  
+  // Add default categories
+  const result = { ...defaultCategories };
+  
+  // Add custom categories with assigned colors
+  let customIndex = 0;
+  [...allCategories].sort().forEach(cat => {
+    if (!result[cat]) {
+      const palette = colorPalette[customIndex % colorPalette.length];
+      result[cat] = {
+        label: cat.replace(/_/g, ' '),
+        icon: '⭐',
+        clr: palette.clr,
+        dot: palette.dot,
+      };
+      customIndex++;
+    }
+  });
+  
+  return result;
+}
+
+let catMeta = {}; // Will be initialized in init()
+const originalCatMeta = {
+  bat:    { label:'Batsman',        icon:'🏏', clr:'#3b9eff', dot:'#3b9eff' },
+  bowl:   { label:'Bowler',         icon:'🏐', clr:'#ff4444', dot:'#ff4444' },
+  ar:     { label:'All-Rounder',    icon:'⚡', clr:'#00e87a', dot:'#00e87a' },
+  '1mp':  { label:'1-Match Player', icon:'🌟', clr:'#c084fc', dot:'#c084fc' },
+  unsold: { label:'Unsold',         icon:'🔄', clr:'#f97316', dot:'#f97316' },
+};
+
+let allPlayers   = JSON.parse(localStorage.getItem('auctionPlayers') || '[]');
+let soldSet      = new Set();
+let unsoldSet    = new Set();
+let currentPrice = 0;
+let activePlayer = null;
+let lastBidder   = null;
+let prevBidder   = null;   // track previous bidder to detect team switch
+let budgets      = {1:100.0, 2:100.0};
+let spent        = {1:0.0,   2:0.0};
+let counts       = {1:0,     2:0};
+let timerId, timeLeft;
+let playerNum    = 0;
+let poolFilter   = 'all';
+
+// ── CAPTAINS ──
+let captains = {
+  1: JSON.parse(localStorage.getItem('captain-1') || 'null'),
+  2: JSON.parse(localStorage.getItem('captain-2') || 'null'),
+};
+let capEditingTeam  = null;
+let capImgBase64    = '';
+
+function openCaptainModal(teamId){
+  capEditingTeam = teamId;
+  capImgBase64   = '';
+  document.getElementById('cap-modal-team').textContent = 'TEAM ' + teamId;
+  const existing = captains[teamId];
+  document.getElementById('cap-input-name').value = existing ? existing.name : '';
+  const previewImg = document.getElementById('cap-preview-img');
+  const hint       = document.getElementById('cap-drop-hint');
+  if(existing && existing.img){
+    previewImg.src = existing.img; previewImg.style.display='block'; hint.style.display='none';
+    capImgBase64 = existing.img;
+  } else {
+    previewImg.src=''; previewImg.style.display='none'; hint.style.display='flex';
+  }
+  document.getElementById('captain-modal').classList.add('show');
+}
+function closeCaptainModal(){
+  document.getElementById('captain-modal').classList.remove('show');
+  capEditingTeam = null; capImgBase64 = '';
+}
+function capHandleDrop(e){
+  e.preventDefault();
+  document.getElementById('cap-drop').style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) capLoadImg(file);
+}
+function capHandleFile(e){
+  const file = e.target.files[0];
+  if(file) capLoadImg(file);
+}
+function capLoadImg(file){
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX=300, canvas=document.createElement('canvas');
+      let w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      capImgBase64 = canvas.toDataURL('image/jpeg',0.72);
+      const previewImg=document.getElementById('cap-preview-img');
+      previewImg.src=capImgBase64; previewImg.style.display='block';
+      document.getElementById('cap-drop-hint').style.display='none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function saveCaptain(){
+  const name = document.getElementById('cap-input-name').value.trim();
+  if(!name){ alert('Enter captain name'); return; }
+  const data = { name, img: capImgBase64 };
+  captains[capEditingTeam] = data;
+  try{ localStorage.setItem('captain-'+capEditingTeam, JSON.stringify(data)); }catch(e){}
+  renderCaptain(capEditingTeam);
+  closeCaptainModal();
+}
+function renderCaptain(teamId){
+  const data = captains[teamId];
+  const wrap = document.getElementById('cap-img-wrap-'+teamId);
+  const nameEl = document.getElementById('cap-name-'+teamId);
+  if(!data){ nameEl.textContent='Tap to set captain'; return; }
+  nameEl.textContent = data.name;
+  if(data.img){
+    wrap.outerHTML = `<img class="captain-img" id="cap-img-wrap-${teamId}" src="${data.img}" onclick="openCaptainModal(${teamId})">`;
+  } else {
+    wrap.innerHTML = '👑';
+  }
+}
+
+// ── BUDGET COLOUR ──
+function updateBudgetColour(teamId){
+  const rem = budgets[teamId];
+  const el  = document.getElementById('budget-'+teamId);
+  const card= document.getElementById('card-'+teamId);
+  let colour, glow, bg;
+  if(rem > 70){
+    colour='#00e87a'; glow='rgba(0,232,122,0.4)';
+    bg='rgba(0,232,122,0.04)';
+  } else if(rem > 40){
+    colour='#e8b84b'; glow='rgba(232,184,75,0.4)';
+    bg='rgba(232,184,75,0.05)';
+  } else {
+    colour='#ff4444'; glow='rgba(255,68,68,0.5)';
+    bg='rgba(255,68,68,0.06)';
+  }
+  el.style.color       = colour;
+  el.style.textShadow  = `0 0 16px ${glow}`;
+  card.style.background= `linear-gradient(135deg,${bg},rgba(255,255,255,0.01))`;
+}
+// Total players split equally between 2 teams
+// Each team must reserve base price for every remaining player they still need to buy
+// maxBid = teamBudget - (playersStillNeeded - 1) * minBasePrice
+// "playersStillNeeded - 1" because 1 slot is the current player being bid on
+
+const TOTAL_BUDGET = 100.0;
+const TEAMS        = 2;
+
+function totalPlayerCount(){ return allPlayers.length; }
+function playersPerTeam()   { return Math.floor(totalPlayerCount() / TEAMS); }
+
+// Minimum base price across all remaining (unsold) players a team still needs
+function minBasePriceRemaining(){
+  const remaining = allPlayers.filter(p => !soldSet.has(p.id));
+  if(!remaining.length) return 0;
+  return Math.min(...remaining.map(p => p.base));
+}
+
+// How many more players does this team need to buy?
+function slotsLeft(teamId){
+  const need = playersPerTeam();
+  return Math.max(0, need - counts[teamId]);
+}
+
+// Max this team can bid on the current player
+// = remaining budget  –  (slotsLeft - 1) × lowestRemainingBase
+// The -1 is because 1 slot is being filled right now by this bid
+function calcMaxBid(teamId){
+  const remaining   = budgets[teamId];
+  const stillNeeded = slotsLeft(teamId);
+  if(stillNeeded <= 0) return 0; // team is already full
+  const reserve     = (stillNeeded - 1) * minBasePriceRemaining();
+  return parseFloat(Math.max(0, remaining - reserve).toFixed(1));
+}
+
+function updateMaxBidDisplay(){
+  [1,2].forEach(id=>{
+    const mb = calcMaxBid(id);
+    const el = document.getElementById(`maxbid-${id}`);
+    if(el) el.textContent = mb.toFixed(1);
+  });
+}
+
+function showCapModal(teamId, attempted, maxAllowed){
+  const slotsNeeded = slotsLeft(teamId);
+  document.getElementById('cap-title').textContent = `${teamNames[teamId]} — BUDGET CAP`;
+  document.getElementById('cap-body').innerHTML =
+    `You're trying to bid <strong>₹${attempted.toFixed(1)} Cr</strong> but Team ${teamId} can only go up to
+    <strong>₹${maxAllowed.toFixed(1)} Cr</strong> on this player.<br><br>
+    <strong>${slotsNeeded}</strong> player slot${slotsNeeded!==1?'s':''} still to fill &mdash; 
+    budget reserve of <strong>₹${(budgets[teamId]-maxAllowed).toFixed(1)} Cr</strong> is locked in for remaining players.`;
+  document.getElementById('cap-modal').classList.add('show');
+}
+
+function init(){
+  // Initialize catMeta with dynamic categories
+  catMeta = initCatMeta();
+  
+  if(!allPlayers.length){
+    document.getElementById('no-players-screen').style.display = 'flex';
+    return;
+  }
+  document.getElementById('start-screen').style.display = 'flex';
+  initTeamNames();
+  initPotTotals();
+  try{ localStorage.setItem('auctionActive','1'); }catch(e){}
+  updateHistoryBadge();
+  renderCaptain(1); renderCaptain(2);
+  updateBudgetColour(1); updateBudgetColour(2);
+  updateMaxBidDisplay();
+  updateBudgetBars();
+  renderPoolTabs(); renderPool(); renderPotSelectorWithProgress();
+}
+
+function renderPoolTabs(){
+  const captainNames = new Set(
+    [captains[1], captains[2]].filter(Boolean).map(c=>c.name.trim().toUpperCase())
+  );
+  const notCap = p => !captainNames.has(p.name.trim().toUpperCase());
+  
+  // Build tabs: 'all' + all unique categories + 'unsold'
+  const uniqueCats = [...new Set(allPlayers.map(p => p.cat))].sort();
+  const cats = ['all', ...uniqueCats, 'unsold'];
+  
+  document.getElementById('pool-tabs').innerHTML = cats.map(c=>{
+    let count, label, icon;
+    if(c==='all'){
+      count = allPlayers.filter(p=>!soldSet.has(p.id)&&notCap(p)).length;
+      label = 'ALL';
+      icon = '📋';
+    } else if(c==='unsold'){
+      count = [...unsoldSet].filter(id=>{ const p=allPlayers.find(x=>x.id===id); return p&&notCap(p); }).length;
+      label = 'UNSOLD';
+      icon = '🔄';
+    } else {
+      count = allPlayers.filter(p=>p.cat===c&&!soldSet.has(p.id)&&notCap(p)).length;
+      const meta = catMeta[c] || { icon: '⭐', label: c.replace(/_/g, ' ') };
+      label = meta.label.charAt(0).toUpperCase() + meta.label.slice(1);
+      icon = meta.icon;
+    }
+    return `<button class="pool-tab${c===poolFilter?' active':''}" onclick="setFilter('${c}')">
+      ${icon}<span class="tab-count">${count}</span></button>`;
+  }).join('');
+}
+
+function setFilter(c){ poolFilter=c; renderPoolTabs(); renderPool(); }
+
+function renderPool(){
+  const captainNames = new Set(
+    [captains[1], captains[2]].filter(Boolean).map(c=>c.name.trim().toUpperCase())
+  );
+  const notCap = p => !captainNames.has(p.name.trim().toUpperCase());
+  const scroll = document.getElementById('pool-scroll');
+  let list;
+  if(poolFilter==='unsold'){
+    list = allPlayers.filter(p => unsoldSet.has(p.id) && notCap(p));
+  } else if(poolFilter==='all'){
+    list = allPlayers.filter(p=>!soldSet.has(p.id) && notCap(p));
+  } else {
+    list = allPlayers.filter(p=>p.cat===poolFilter&&!soldSet.has(p.id)&&!unsoldSet.has(p.id)&&notCap(p));
+  }
+  if(!list.length){ scroll.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:0.75rem;padding:16px;letter-spacing:.1em;">EMPTY</div>`; return; }
+  scroll.innerHTML = list.map(p=>{
+    const m = catMeta[p.cat] || catMeta['bat'];
+    const isSold   = soldSet.has(p.id);
+    const isUnsold = unsoldSet.has(p.id);
+    let cls = isSold ? ' sold-item' : isUnsold ? ' unsold-pot-item' : '';
+    return `<div class="pool-item${cls}">
+      <div class="pool-item-img">${p.img?`<img src="${p.img}" onerror="this.parentElement.textContent='${m.icon}'">`:`${m.icon}`}</div>
+      <div class="pool-item-info"><div class="pool-item-name">${p.name}${isUnsold?' 🔄':''}</div><div class="pool-item-base">₹${p.base.toFixed(1)}Cr · ${m.label}</div></div>
+      <div class="pool-cat-dot" style="background:${m.dot}"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderPotSelector(){
+  const cats=['bat','bowl','ar','1mp'];
+  let html = cats.map(cat=>{
+    const count = allPlayers.filter(p=>p.cat===cat&&!soldSet.has(p.id)&&!unsoldSet.has(p.id)).length;
+    return `<button class="pot-sel-btn ${cat==='1mp'?'wk':cat}${count===0?' empty':''}" onclick="pickFromPot('${cat}')">
+      ${catMeta[cat].icon} ${catMeta[cat].label}s<span class="sel-count">${count}</span></button>`;
+  }).join('');
+  // Unsold pot — only show if there are unsold players
+  const unsoldCount = unsoldSet.size;
+  if(unsoldCount > 0){
+    html += `<button class="pot-sel-btn unsold" onclick="pickFromPot('unsold')">
+      🔄 Unsold Pool<span class="sel-count">${unsoldCount}</span></button>`;
+  }
+  document.getElementById('pot-selector').innerHTML = html;
+}
+
+function pickFromPot(cat){
+  // Build a set of captain names to exclude from the randomizer
+  const captainNames = new Set(
+    [captains[1], captains[2]].filter(Boolean).map(c => c.name.trim().toUpperCase())
+  );
+  const notCaptain = p => !captainNames.has(p.name.trim().toUpperCase());
+
+  let pool;
+  if(cat === 'unsold'){
+    pool = allPlayers.filter(p => unsoldSet.has(p.id) && notCaptain(p));
+  } else {
+    pool = allPlayers.filter(p=>p.cat===cat&&!soldSet.has(p.id)&&!unsoldSet.has(p.id)&&notCaptain(p));
+    if(!pool.length) pool = allPlayers.filter(p=>p.cat===cat&&!soldSet.has(p.id)&&notCaptain(p));
+  }
+  if(!pool.length) return;
+  const candidates = pool;
+  activePlayer = candidates[Math.floor(Math.random()*candidates.length)];
+  unsoldSet.delete(activePlayer.id);
+  playerNum++;
+
+  showReveal(activePlayer, cat==='unsold'? activePlayer.cat : cat, pool, ()=> revealPlayer(activePlayer, cat==='unsold'? activePlayer.cat : cat));
+}
+
+function showReveal(player, cat, allPoolPlayers, callback){
+  const m    = catMeta[cat];
+  const ov   = document.getElementById('reveal-overlay');
+  const ITEM_H = 32;
+
+  function showPhase(id){
+    ['rv-phase1','rv-phase2','rv-phase3','rv-phase4'].forEach(p=>{
+      document.getElementById(p).style.display = p===id ? 'flex' : 'none';
+    });
+  }
+
+  ov.classList.add('show');
+  SFX.startDrone();
+
+  /* ── PHASE 1: "The next player is..." — 3 seconds ── */
+  showPhase('rv-phase1');
+
+  setTimeout(()=>{
+
+    /* ── PHASE 2: Slot machine drum — 5 seconds spin ── */
+    showPhase('rv-phase2');
+    SFX.startSlotTicks(5000);
+    document.getElementById('rv-category').textContent = m.icon + '  ' + m.label.toUpperCase();
+    document.getElementById('rv-category').style.color = m.clr;
+
+    // Build name list — shuffle pool, remove winner from middle, pin winner at end
+    let names = allPoolPlayers.map(p => p.name);
+    while(names.length < 8) names = [...names, ...names];
+    names = names.sort(()=>Math.random()-0.5).slice(0,35);
+    names = names.filter(n => n !== player.name);
+    names.push(player.name); // winner always last
+
+    const padTop = 2;
+    const reel   = document.getElementById('slot-reel');
+    reel.style.transition = 'none';
+    reel.style.transform  = 'translateY(0px)';
+    reel.innerHTML = '';
+
+    for(let i=0;i<padTop;i++){
+      const el=document.createElement('div'); el.className='slot-item'; el.textContent='—'; reel.appendChild(el);
+    }
+    names.forEach(name=>{
+      const el=document.createElement('div'); el.className='slot-item'; el.textContent=name; reel.appendChild(el);
+    });
+
+    // Calculate exact pixel to land winner in drum center
+    const winnerIndex = padTop + names.length - 1;
+    const drumCenter  = 80 / 2;  // 40px  (drum height = 80px)
+    const finalY      = -(winnerIndex * ITEM_H) + (drumCenter - ITEM_H / 2);
+
+    const spinDuration = 5000;
+    let startTime = null;
+
+    function animateSpin(ts){
+      if(!startTime) startTime = ts;
+      const progress = Math.min((ts - startTime) / spinDuration, 1);
+      const eased    = 1 - Math.pow(1 - progress, 4); // ease-out quart
+      reel.style.transform = `translateY(${finalY * eased}px)`;
+      if(progress < 1){
+        requestAnimationFrame(animateSpin);
+      } else {
+        reel.style.transform = `translateY(${finalY}px)`;
+
+        /* ── PHASE 3: Name reveal — 2.2 seconds ── */
+        setTimeout(()=>{
+          showPhase('rv-phase3');
+          SFX.nameLand();
+          document.getElementById('rv-big-name').textContent  = player.name;
+          document.getElementById('rv-category3').textContent = m.icon + '  ' + m.label.toUpperCase();
+          document.getElementById('rv-category3').style.color = m.clr;
+
+          setTimeout(()=>{
+
+            /* ── PHASE 4: 3-2-1 countdown ── */
+            showPhase('rv-phase4');
+            const cd = document.getElementById('rv-countdown');
+            let count = 3;
+
+            function fireCount(n){
+              // Set number and force CSS animation to restart cleanly
+              cd.textContent = n;
+              cd.style.animation = 'none';
+              void cd.offsetWidth;                          // force reflow
+              cd.style.animation = 'countPulse 0.95s ease-in-out forwards';
+            }
+
+            fireCount(3); SFX.countThud(3);
+            setTimeout(()=>{ fireCount(2); SFX.countThud(2); }, 950);
+            setTimeout(()=>{ fireCount(1); SFX.countThud(1); }, 1900);
+            setTimeout(()=>{
+              ov.classList.remove('show');
+              showPhase('rv-phase1'); // reset for next round
+              setTimeout(callback, 300);
+            }, 2850);
+
+          }, 2200); // phase 3 duration
+        }, 350);    // brief pause after drum stops
+      }
+    }
+    requestAnimationFrame(animateSpin);
+
+  }, 3000); // phase 1 duration
+}
+
+function revealPlayer(player, cat){
+  const m = catMeta[cat];
+  document.getElementById('start-screen').style.display='none';
+  const ps = document.getElementById('player-stage');
+  ps.style.display='flex'; ps.style.animation='none'; void ps.offsetWidth; ps.style.animation='';
+
+  document.getElementById('p-name').textContent      = player.name;
+  document.getElementById('p-role-badge').textContent= `${m.icon} ${m.label}`;
+  document.getElementById('p-role-badge').style.color= m.clr;
+  document.getElementById('p-base').textContent      = player.base.toFixed(1);
+  document.getElementById('pot-label').textContent   = m.label.toUpperCase()+' POT';
+  document.getElementById('round-label').textContent = 'PLAYER '+playerNum;
+  document.getElementById('img-ring').style.background =
+    `conic-gradient(from 0deg,${m.dot},transparent 60%,${m.dot})`;
+
+  const img=document.getElementById('p-img'), ph=document.getElementById('p-ph');
+  ph.style.display='none';
+  if(player.img){ img.style.display='block'; img.src=player.img; }
+  else { img.style.display='none'; ph.textContent=m.icon; ph.style.display='flex'; }
+
+  currentPrice=player.base; lastBidder=null;
+  unsoldSet.delete(player.id);
+  updatePrice();
+  document.getElementById('card-1').classList.remove('active-bidder');
+  document.getElementById('card-2').classList.remove('active-bidder');
+  startTimer(); strikeGavel();
+  triggerPlayerEntrance();
+}
+
+function formatTime(s){ return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
+function startTimer(){
+  clearInterval(timerId); timeLeft=120; updateTimerUI();
+  timerId=setInterval(()=>{ timeLeft--; updateTimerUI(); if(timeLeft<=0){clearInterval(timerId);confirmSold();} },1000);
+}
+function resetTimer(){
+  // Flash the timer display to signal reset
+  clearInterval(timerId); timeLeft=120;
+  const el=document.getElementById('timer');
+  el.style.animation='none'; void el.offsetWidth;
+  el.style.animation='timerReset 0.4s ease';
+  updateTimerUI();
+  timerId=setInterval(()=>{ timeLeft--; updateTimerUI(); if(timeLeft<=0){clearInterval(timerId);confirmSold();} },1000);
+}
+function updateTimerUI(){
+  const el=document.getElementById('timer'); el.textContent=formatTime(timeLeft);
+  el.className=timeLeft>60?'timer-display safe':timeLeft>20?'timer-display warn':'timer-display danger';
+  if(timeLeft<=20 && timeLeft>0) SFX.timerBeep(timeLeft);
+  updateTimerUrgency();
+}
+function strikeGavel(){
+  const g=document.getElementById('hammer'); g.classList.add('strike');
+  setTimeout(()=>g.classList.remove('strike'),350);
+}
+function updatePrice(){
+  const el=document.getElementById('p-price'); el.textContent=currentPrice.toFixed(1);
+  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+}
+function inc(v){
+  if(!lastBidder){
+    const w = document.getElementById('team-warn');
+    w.classList.remove('show'); void w.offsetWidth;
+    w.classList.add('show');
+    setTimeout(()=>w.classList.remove('show'), 3000);
+    return;
+  }
+  const proposed = parseFloat((currentPrice + v).toFixed(1));
+  const cap      = calcMaxBid(lastBidder);
+  // Also hard-check: cannot exceed total budget
+  const hardCap  = parseFloat(budgets[lastBidder].toFixed(1));
+  const effective= Math.min(cap, hardCap);
+  if(proposed > effective){
+    showCapModal(lastBidder, proposed, effective);
+    return;
+  }
+  SFX.bidInc(v);
+  currentPrice = proposed;
+  updatePrice();
+  pushBidHistory(lastBidder, currentPrice);
+}
+
+// Team buttons mark who is bidding — timer resets ONLY when a different team bids
+function teamBid(id, e){
+  // Check: is this team already full?
+  if(slotsLeft(id) <= 0){
+    document.getElementById('cap-title').textContent = `TEAM ${id} — SQUAD FULL`;
+    document.getElementById('cap-body').innerHTML =
+      `Team ${id} has already filled all <strong>${playersPerTeam()}</strong> player slots and cannot bid further.`;
+    document.getElementById('cap-modal').classList.add('show');
+    return;
+  }
+  // Check: can this team even afford the current price?
+  const cap = calcMaxBid(id);
+  if(currentPrice > cap){
+    showCapModal(id, currentPrice, cap);
+    return;
+  }
+
+  const switchingTeam = (lastBidder !== id); // true only if a different team is now bidding
+  prevBidder = lastBidder;
+  lastBidder = id;
+  SFX.teamSelect();
+  if(id===1) team1BidCount++; else team2BidCount++;
+  updateWarMode();
+  // Note: bid history is only logged when a price increment (+) is made, not just on team selection
+
+  // Only reset timer if a DIFFERENT team clicked
+  if(switchingTeam){
+    resetTimer();
+  }
+
+  document.getElementById('card-1').classList.toggle('active-bidder', id===1);
+  document.getElementById('card-2').classList.toggle('active-bidder', id===2);
+  if(e){
+    const r=document.createElement('div'); r.className=`bid-ripple r${id}`;
+    r.style.left=e.clientX+'px'; r.style.top=e.clientY+'px';
+    document.body.appendChild(r); setTimeout(()=>r.remove(),700);
+  }
+}
+document.getElementById('bid-t1').addEventListener('click',e=>teamBid(1,e));
+document.getElementById('bid-t2').addEventListener('click',e=>teamBid(2,e));
+
+function confirmSold(){
+  clearInterval(timerId); strikeGavel(); SFX.sold();
+  if(!lastBidder){ markUnsold(); return; }
+  launchParticles();
+  launchConfetti();
+  checkRecord(currentPrice);
+  resetWarMode();
+  soldSet.add(activePlayer.id);
+  unsoldSet.delete(activePlayer.id);
+  budgets[lastBidder]=parseFloat((budgets[lastBidder]-currentPrice).toFixed(1));
+  spent[lastBidder]  =parseFloat((spent[lastBidder]+currentPrice).toFixed(1));
+  counts[lastBidder]++;
+  teamRosters[lastBidder].push({...activePlayer, soldFor: currentPrice});
+  document.getElementById(`budget-${lastBidder}`).textContent=budgets[lastBidder].toFixed(1);
+  document.getElementById(`spent-${lastBidder}`).textContent =spent[lastBidder].toFixed(1);
+  document.getElementById(`count-${lastBidder}`).textContent =counts[lastBidder];
+  updateMaxBidDisplay();
+  updateBudgetBars();
+  updateBudgetColour(lastBidder);
+  prevBidder = null;
+  const m=catMeta[activePlayer.cat];
+  const entry=document.createElement('div'); entry.className='player-entry';
+  entry.innerHTML=`<span class="pname">${m.icon} ${activePlayer.name}</span><span class="pprice">₹${currentPrice.toFixed(1)}Cr</span>`;
+  document.getElementById(`list-${lastBidder}`).prepend(entry);
+  showOverlay(true,lastBidder,currentPrice);
+}
+
+function markUnsold(){
+  clearInterval(timerId); SFX.unsold();
+  resetWarMode();
+  if(activePlayer){ unsoldSet.add(activePlayer.id); }
+  showOverlay(false,null,0);
+}
+
+/* Minus button — subtract from current bid, floor at base price */
+function dec(v){
+  if(!lastBidder){
+    const w = document.getElementById('team-warn');
+    w.classList.remove('show'); void w.offsetWidth;
+    w.classList.add('show');
+    setTimeout(()=>w.classList.remove('show'), 3000);
+    return;
+  }
+  const floor = activePlayer ? activePlayer.base : 0;
+  const proposed = parseFloat((currentPrice - v).toFixed(1));
+  if(proposed < floor){
+    // Can't go below base price
+    document.getElementById('cap-title').textContent = 'BELOW BASE PRICE';
+    document.getElementById('cap-body').innerHTML =
+      `Cannot go below the base price of <strong>₹${floor.toFixed(1)} Cr</strong> for this player.`;
+    document.getElementById('cap-modal').classList.add('show');
+    return;
+  }
+  currentPrice = proposed;
+  updatePrice();
+}
+
+/* Real-time budget bar update */
+function updateBudgetBars(){
+  [1,2].forEach(id=>{
+    const pct  = Math.min(100, (spent[id]/TOTAL_BUDGET)*100);
+    const fill = document.getElementById(`bar-fill-${id}`);
+    const spEl = document.getElementById(`bar-spent-${id}`);
+    const ltEl = document.getElementById(`bar-left-${id}`);
+    if(!fill) return;
+    fill.style.width = pct+'%';
+    // Colour: green < 50%, amber < 80%, red >= 80%
+    fill.style.background = pct>=80 ? '#ff4444' : pct>=50 ? '#e8b84b' : '#00e87a';
+    if(spEl) spEl.textContent = spent[id].toFixed(1);
+    if(ltEl) ltEl.textContent = budgets[id].toFixed(1);
+  });
+}
+
+function showOverlay(sold,teamId,price){
+  const ov=document.getElementById('sold-overlay');
+  const hl=document.getElementById('sold-hl');
+  if(sold){
+    hl.textContent='SOLD!';
+    hl.style.background='linear-gradient(135deg,#00e87a,#66ffb2)';
+    hl.style.webkitBackgroundClip='text'; hl.style.webkitTextFillColor='transparent';
+    document.getElementById('sold-pname').textContent=activePlayer.name;
+    document.getElementById('sold-to').textContent='→ '+teamNames[teamId];
+    document.getElementById('sold-pr').textContent='₹ '+price.toFixed(1)+' Cr';
+  } else {
+    hl.textContent='UNSOLD';
+    hl.style.background='linear-gradient(135deg,#ff4444,#ff8888)';
+    hl.style.webkitBackgroundClip='text'; hl.style.webkitTextFillColor='transparent';
+    document.getElementById('sold-pname').textContent=activePlayer?.name||'';
+    document.getElementById('sold-to').textContent='Back to Pool';
+    document.getElementById('sold-pr').textContent='Will appear again later';
+  }
+  ov.classList.add('show');
+  setTimeout(()=>{
+    ov.classList.remove('show');
+    document.getElementById('player-stage').style.display='none';
+    document.getElementById('start-screen').style.display='flex';
+    document.getElementById('card-1').classList.remove('active-bidder');
+    document.getElementById('card-2').classList.remove('active-bidder');
+    activePlayer=null; lastBidder=null; prevBidder=null;
+    clearBidHistory();
+    renderPotSelectorWithProgress(); renderPoolTabs(); renderPool();
+    checkAuctionComplete();
+  },2600);
+}
+
+/* ── LINEUP DOWNLOAD ── */
+// Store sold players per team with full details
+let teamRosters = {1:[], 2:[]};
+
+// Override confirmSold to also track full roster details
+const _origConfirmSold = confirmSold;
+
+function openLineup(){
+  const area = document.getElementById('lineup-canvas-area');
+  area.innerHTML = [1,2].map(tid=>{
+    const roster     = teamRosters[tid];
+    const totalSpent = spent[tid].toFixed(1);
+    const remaining  = budgets[tid].toFixed(1);
+    const cap        = captains[tid];
+
+    // Captain row at the top
+    const capRow = cap ? `<div class="ltc-player-row" style="border:1px solid rgba(232,184,75,0.3);background:rgba(232,184,75,0.06);">
+      ${cap.img
+        ? `<img class="ltc-player-img" src="${cap.img}" style="border:1px solid rgba(232,184,75,0.4);" onerror="this.outerHTML='<div class=\\'ltc-player-ph\\'>👑</div>'">`
+        : `<div class="ltc-player-ph">👑</div>`}
+      <div class="ltc-player-info">
+        <div class="ltc-player-name" style="color:#e8b84b;">${cap.name}</div>
+        <div class="ltc-player-cat" style="color:rgba(232,184,75,0.6);">👑 CAPTAIN</div>
+      </div>
+      <div class="ltc-player-price" style="color:#e8b84b;">—</div>
+    </div>` : '';
+
+    const rows = roster.length ? roster.map(p=>{
+      const m = catMeta[p.cat] || {};
+      return `<div class="ltc-player-row">
+        ${p.img
+          ? `<img class="ltc-player-img" src="${p.img}" onerror="this.outerHTML='<div class=\\'ltc-player-ph\\'>${m.icon||'👤'}</div>'">`
+          : `<div class="ltc-player-ph">${m.icon||'👤'}</div>`}
+        <div class="ltc-player-info">
+          <div class="ltc-player-name">${p.name}</div>
+          <div class="ltc-player-cat">${m.icon||''} ${m.label||''}</div>
+        </div>
+        <div class="ltc-player-price">₹${p.soldFor.toFixed(1)}Cr</div>
+      </div>`;
+    }).join('') : `<div class="ltc-empty">NO PLAYERS YET</div>`;
+
+    return `<div class="lineup-team-card ltc-t${tid}">
+      <div class="ltc-header">
+        <div class="ltc-team-name">${teamNames[tid]}</div>
+        <div class="ltc-stats">
+          <div class="ltc-stat">Players: <span>${counts[tid]}</span></div>
+          <div class="ltc-stat">Spent: <span>₹${totalSpent}Cr</span></div>
+          <div class="ltc-stat">Left: <span>₹${remaining}Cr</span></div>
+        </div>
+      </div>
+      <div class="ltc-players">${capRow}${rows}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('lineup-modal').classList.add('show');
+}
+
+function closeLineup(){
+  document.getElementById('lineup-modal').classList.remove('show');
+}
+
+function downloadLineup(){
+  // If the summary overlay is visible, screenshot the summary content
+  // Otherwise screenshot the lineup modal content
+  const summaryOpen = document.getElementById('summary-overlay').classList.contains('show');
+  const area = summaryOpen
+    ? document.getElementById('summary-inner')
+    : document.getElementById('lineup-canvas-area');
+
+  if(!area){ alert('Nothing to save yet — open the lineup first.'); return; }
+
+  // Ensure lineup-canvas-area is populated if using it
+  if(!summaryOpen && !area.innerHTML.trim()){
+    alert('Open the lineup view first to populate it.'); return;
+  }
+
+  const prevBg  = area.style.background;
+  const prevPad = area.style.padding;
+  const prevBr  = area.style.borderRadius;
+  area.style.background   = '#0d0e14';
+  area.style.padding      = summaryOpen ? '0' : '20px';
+  area.style.borderRadius = summaryOpen ? '0' : '16px';
+
+  html2canvas(area, {
+    backgroundColor: '#0d0e14',
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    ignoreElements: el => el.classList && el.classList.contains('summary-actions'),
+  }).then(canvas=>{
+    area.style.background   = prevBg;
+    area.style.padding      = prevPad;
+    area.style.borderRadius = prevBr;
+    const link = document.createElement('a');
+    link.download = summaryOpen ? 'auction-summary.png' : 'auction-lineup.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+/* ══════════════════════════════════════════════
+   PROFESSIONAL SOUND ENGINE  —  Web Audio API
+   No external files. All sounds synthesised.
+   ══════════════════════════════════════════════ */
+const SFX = (() => {
+  let ctx = null;
+  let droneNodes   = [];
+  let slotTimer    = null;
+
+  /* ── Core helpers ── */
+  function ac(){
+    if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function out(gainVal = 1){
+    const g = ac().createGain();
+    g.gain.value = gainVal;
+    g.connect(ac().destination);
+    return g;
+  }
+
+  /* Oscillator with smooth attack + decay */
+  function osc(freq, type, attackT, decayT, vol, delay=0, dest=null){
+    const c   = ac();
+    const o   = c.createOscillator();
+    const env = c.createGain();
+    const dst = dest || c.destination;
+    o.connect(env); env.connect(dst);
+    o.type = type;
+    o.frequency.setValueAtTime(freq, c.currentTime + delay);
+    env.gain.setValueAtTime(0,   c.currentTime + delay);
+    env.gain.linearRampToValueAtTime(vol, c.currentTime + delay + attackT);
+    env.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + delay + attackT + decayT);
+    o.start(c.currentTime + delay);
+    o.stop( c.currentTime + delay + attackT + decayT + 0.05);
+    return { o, env };
+  }
+
+  /* Filtered noise burst */
+  function noiseBurst({ dur=0.3, vol=0.5, lpFreq=600, hpFreq=0, delay=0, dest=null }={}){
+    const c   = ac();
+    const buf = c.createBuffer(1, Math.ceil(c.sampleRate*(dur+0.1)), c.sampleRate);
+    const d   = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const src = c.createBufferSource();
+    const lp  = c.createBiquadFilter();
+    const env = c.createGain();
+    const dst = dest || c.destination;
+    src.buffer = buf;
+    lp.type='lowpass'; lp.frequency.value=lpFreq;
+    src.connect(lp); lp.connect(env); env.connect(dst);
+    if(hpFreq){
+      const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=hpFreq;
+      lp.disconnect(env); lp.connect(hp); hp.connect(env);
+    }
+    env.gain.setValueAtTime(vol, c.currentTime+delay);
+    env.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+delay+dur);
+    src.start(c.currentTime+delay);
+    src.stop( c.currentTime+delay+dur+0.05);
+    return src;
+  }
+
+  /* Reverb convolver — short room */
+  function makeReverb(decaySec=1.2, wet=0.3){
+    const c   = ac();
+    const len = Math.ceil(c.sampleRate * decaySec);
+    const buf = c.createBuffer(2, len, c.sampleRate);
+    for(let ch=0;ch<2;ch++){
+      const d=buf.getChannelData(ch);
+      for(let i=0;i<len;i++) d[i]=( Math.random()*2-1 ) * Math.pow(1-i/len, 2);
+    }
+    const conv = c.createConvolver();
+    conv.buffer = buf;
+    const wg = c.createGain(); wg.gain.value = wet;
+    conv.connect(wg); wg.connect(c.destination);
+    return conv; // route signals into conv
+  }
+
+  /* ── 1. SUSPENSE DRONE  (Phase 1 — 3 s) ── */
+  function startDrone(){
+    stopDrone();
+    const c = ac();
+    const rev = makeReverb(2.0, 0.4);
+    const master = c.createGain();
+    master.connect(c.destination); master.connect(rev);
+
+    // Low cello-like sustained tone
+    const freqs = [55, 82.4, 110];
+    freqs.forEach((f,i)=>{
+      const o   = c.createOscillator();
+      const env = c.createGain();
+      // Add slight vibrato
+      const lfo = c.createOscillator();
+      const lfog= c.createGain();
+      lfo.frequency.value = 4.5 + i*0.3;
+      lfog.gain.value = 1.2;
+      lfo.connect(lfog); lfog.connect(o.frequency);
+      lfo.start();
+      o.type='sawtooth';
+      o.frequency.value = f;
+      // Soft lowpass for warmth
+      const lp = c.createBiquadFilter();
+      lp.type='lowpass'; lp.frequency.value=400+i*80;
+      o.connect(lp); lp.connect(env); env.connect(master);
+      env.gain.setValueAtTime(0, c.currentTime);
+      env.gain.linearRampToValueAtTime(0.06-i*0.015, c.currentTime+1.2);
+      o.start(); o.stop(c.currentTime+3.5);
+      droneNodes.push(o, lfo);
+    });
+
+    // Sub pulse
+    const sub = c.createOscillator();
+    const senv= c.createGain();
+    sub.type='sine'; sub.frequency.value=27.5;
+    sub.connect(senv); senv.connect(master);
+    senv.gain.setValueAtTime(0,c.currentTime);
+    senv.gain.linearRampToValueAtTime(0.12, c.currentTime+0.6);
+    senv.gain.linearRampToValueAtTime(0.06, c.currentTime+3.0);
+    sub.start(); sub.stop(c.currentTime+3.6);
+    droneNodes.push(sub);
+  }
+
+  function stopDrone(){
+    droneNodes.forEach(n=>{ try{ n.stop(); }catch(e){} });
+    droneNodes = [];
+  }
+
+  /* ── 2. SLOT MACHINE TICKS  (Phase 2 — 5 s) ── */
+  function startSlotTicks(totalMs=5000){
+    stopSlotTicks();
+    const c  = ac();
+    const t0 = performance.now();
+
+    // Pre-schedule all ticks as Web Audio events — no repeated node creation,
+    // no setTimeout jitter, no overlapping buffers = zero glitch
+    let scheduleTime = c.currentTime + 0.02; // small start offset
+    let elapsed      = 0;
+    const ticks      = [];
+
+    while(elapsed < totalMs){
+      const prog  = Math.min(elapsed / totalMs, 1);
+      const eased = 1 - Math.pow(1 - prog, 3);
+      const gapMs = 30 + eased * 300;       // 30ms → 330ms interval
+      const vol   = 0.14 - eased * 0.08;    // 0.14 → 0.06, always positive
+      const freq  = 900  - eased * 400;     // 900Hz → 500Hz, softens as it slows
+
+      ticks.push({ scheduleTime, vol, freq });
+      elapsed      += gapMs;
+      scheduleTime += gapMs / 1000;
+    }
+
+    // Schedule a single short sine-based click per tick — much lighter than noise+osc combo
+    ticks.forEach(({ scheduleTime: st, vol, freq })=>{
+      const o   = c.createOscillator();
+      const env = c.createGain();
+      const lp  = c.createBiquadFilter();
+      lp.type = 'bandpass'; lp.frequency.value = freq; lp.Q.value = 4;
+      o.type = 'sine'; o.frequency.value = freq;
+      o.connect(lp); lp.connect(env); env.connect(c.destination);
+      env.gain.setValueAtTime(0,   st);
+      env.gain.linearRampToValueAtTime(vol, st + 0.004);
+      env.gain.exponentialRampToValueAtTime(0.0001, st + 0.028);
+      o.start(st); o.stop(st + 0.032);
+    });
+
+    // slotTimer is just a cleanup handle — nothing to clear since it's all pre-scheduled
+    slotTimer = setTimeout(()=>{ slotTimer = null; }, totalMs + 200);
+  }
+
+  function stopSlotTicks(){
+    if(slotTimer){ clearTimeout(slotTimer); slotTimer=null; }
+    // Pre-scheduled oscillators finish on their own — no cleanup needed
+  }
+
+  /* ── 3. NAME LANDS  (Phase 3 sting) ── */
+  function nameLand(){
+    stopDrone(); stopSlotTicks();
+    const c   = ac();
+    const rev = makeReverb(1.8, 0.35);
+
+    // Orchestral brass-like stab — sawtooth + detuned layer
+    const brassNotes = [
+      {f:110, d:0.0}, {f:138.6, d:0.03}, {f:164.8, d:0.06},
+      {f:220,  d:0.10}, {f:277.2,d:0.15}, {f:329.6,d:0.20},
+    ];
+    brassNotes.forEach(({f,d})=>{
+      const o   = c.createOscillator();
+      const env = c.createGain();
+      const lp  = c.createBiquadFilter();
+      lp.type='lowpass'; lp.frequency.value=2200;
+      o.type='sawtooth'; o.frequency.value=f;
+      o.connect(lp); lp.connect(env);
+      env.connect(c.destination); env.connect(rev);
+      env.gain.setValueAtTime(0,         c.currentTime+d);
+      env.gain.linearRampToValueAtTime(0.22, c.currentTime+d+0.025);
+      env.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+d+0.9);
+      o.start(c.currentTime+d); o.stop(c.currentTime+d+1.0);
+    });
+
+    // Deep impact thump
+    noiseBurst({ dur:0.35, vol:0.7, lpFreq:180 });
+    // Body resonance
+    osc(55,'sine',0.01,0.5,0.4,0);
+    // High sparkle shimmer
+    osc(2200,'sine',0.005,0.3,0.08,0.18);
+    osc(3300,'sine',0.005,0.25,0.06,0.22);
+  }
+
+  /* ── 4. COUNTDOWN THUD  (3 / 2 / 1) ── */
+  function countThud(n){
+    const c   = ac();
+    const rev = makeReverb(0.8, 0.25);
+    const pitchMap = { 3:140, 2:120, 1:100 };
+    const f = pitchMap[n] || 110;
+
+    // Orchestral bass drum hit
+    noiseBurst({ dur:0.5, vol:0.75, lpFreq:280 });
+    // Pitched low sine punch
+    const o   = c.createOscillator();
+    const env = c.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(f*1.5, c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(f*0.5, c.currentTime+0.18);
+    o.connect(env); env.connect(c.destination); env.connect(rev);
+    env.gain.setValueAtTime(0,    c.currentTime);
+    env.gain.linearRampToValueAtTime(0.55, c.currentTime+0.01);
+    env.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+0.6);
+    o.start(); o.stop(c.currentTime+0.65);
+
+    if(n===1){
+      // Extra tension — rising high hit before GO
+      osc(440,'sine',0.01,0.2,0.2,0.05);
+      osc(660,'sine',0.01,0.15,0.15,0.08);
+    }
+  }
+
+  /* ── 5. TEAM SELECTED  (soft professional click) ── */
+  function teamSelect(){
+    const c = ac();
+    // Warm UI confirm — two soft wood-block like tones
+    noiseBurst({ dur:0.04, vol:0.25, lpFreq:1200, hpFreq:600 });
+    osc(800,'sine',0.004,0.08,0.18,0.0);
+    osc(1000,'sine',0.004,0.06,0.12,0.04);
+  }
+
+  /* ── 6. BID INCREMENT  (clean bell ding) ── */
+  function bidInc(crores){
+    const c   = ac();
+    const rev = makeReverb(1.0, 0.2);
+    // Bell partial series — sounds like a real bell/chime
+    const base  = 520 + crores * 60;
+    const parts = [1, 2.756, 5.404, 8.933];
+    const vols  = [0.28, 0.14, 0.08, 0.04];
+    parts.forEach((ratio,i)=>{
+      const o   = c.createOscillator();
+      const env = c.createGain();
+      o.type='sine'; o.frequency.value = base * ratio;
+      o.connect(env); env.connect(c.destination); env.connect(rev);
+      env.gain.setValueAtTime(0,         c.currentTime);
+      env.gain.linearRampToValueAtTime(vols[i], c.currentTime+0.006);
+      env.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+0.5+i*0.1);
+      o.start(); o.stop(c.currentTime+0.7);
+    });
+  }
+
+  /* ── 7. GAVEL BANG  (realistic wood impact) ── */
+  function gavelBang(){
+    const c = ac();
+    // Hard transient — high-passed noise (crack of wood)
+    noiseBurst({ dur:0.06, vol:0.9, lpFreq:5000, hpFreq:800 });
+    // Body resonance (hollow wood thud)
+    noiseBurst({ dur:0.35, vol:0.6, lpFreq:350 });
+    // Pitched resonance of the block
+    osc(180,'sine',0.005,0.25,0.3,0.01);
+    osc(360,'sine',0.005,0.18,0.15,0.01);
+  }
+
+  /* ── 8. SOLD FANFARE + CROWD APPLAUSE ── */
+  function sold(){
+    const c   = ac();
+    const rev = makeReverb(2.5, 0.5);
+
+    gavelBang();
+
+    // Orchestral triumphant fanfare — trumpet-like
+    // Rising figure: G3 B3 D4 G4 B4 D5
+    const fanfare = [
+      {f:196.0, t:0.10, dur:0.22},
+      {f:246.9, t:0.28, dur:0.20},
+      {f:293.7, t:0.44, dur:0.20},
+      {f:392.0, t:0.60, dur:0.28},
+      {f:493.9, t:0.84, dur:0.28},
+      {f:587.3, t:1.08, dur:0.55},
+    ];
+    fanfare.forEach(({f,t,dur})=>{
+      // Trumpet: sawtooth + strong lowpass
+      const o   = c.createOscillator();
+      const env = c.createGain();
+      const lp  = c.createBiquadFilter();
+      lp.type='lowpass'; lp.frequency.value=1800;
+      o.type='sawtooth'; o.frequency.value=f;
+      o.connect(lp); lp.connect(env);
+      env.connect(c.destination); env.connect(rev);
+      env.gain.setValueAtTime(0,    c.currentTime+t);
+      env.gain.linearRampToValueAtTime(0.35, c.currentTime+t+0.02);
+      env.gain.setValueAtTime(0.35, c.currentTime+t+dur-0.04);
+      env.gain.linearRampToValueAtTime(0, c.currentTime+t+dur);
+      o.start(c.currentTime+t); o.stop(c.currentTime+t+dur+0.05);
+    });
+
+    // Final chord stab — tutti
+    [196,247,294,392].forEach((f,i)=>{
+      osc(f,'sawtooth',0.02,0.6,0.18,1.65);
+    });
+
+    // ── CROWD APPLAUSE ──
+    // Layered filtered noise bursts at different frequencies to mimic crowd texture
+    setTimeout(()=>{
+      const apDur = 3.5; // seconds of applause
+      const apRev = makeReverb(3.0, 0.6);
+
+      // Multiple noise layers panned/tuned differently = crowd texture
+      const layers = [
+        { lpF:3500, hpF:1200, vol:0.22, delay:0    },
+        { lpF:2200, hpF: 600, vol:0.18, delay:0.05 },
+        { lpF:1000, hpF: 200, vol:0.14, delay:0.02 },
+        { lpF: 500, hpF:  80, vol:0.10, delay:0.08 },
+      ];
+
+      layers.forEach(({lpF,hpF,vol,delay})=>{
+        const dur2 = apDur + delay;
+        const bLen = Math.ceil(c.sampleRate * (dur2+0.2));
+        const buf  = c.createBuffer(2, bLen, c.sampleRate);
+
+        for(let ch=0;ch<2;ch++){
+          const d = buf.getChannelData(ch);
+          // Amplitude-modulated noise — mimics clapping rhythm (random bursts)
+          for(let i=0;i<bLen;i++){
+            // Low-frequency amplitude modulation (4–12 Hz) = clapping bursts
+            const t2   = i / c.sampleRate;
+            const mod  = 0.5 + 0.5*Math.sin(t2*6.5*Math.PI + ch*0.8)
+                             * 0.4*Math.sin(t2*11*Math.PI)
+                             + 0.1*Math.random();
+            d[i] = (Math.random()*2-1) * Math.max(0, mod);
+          }
+        }
+
+        const src = c.createBufferSource();
+        const lp  = c.createBiquadFilter();
+        const hp  = c.createBiquadFilter();
+        const env = c.createGain();
+        src.buffer = buf;
+        lp.type='lowpass';  lp.frequency.value=lpF;
+        hp.type='highpass'; hp.frequency.value=hpF;
+        src.connect(lp); lp.connect(hp); hp.connect(env);
+        env.connect(c.destination); env.connect(apRev);
+
+        // Envelope: quick swell in, hold, fade out
+        const t0 = c.currentTime + delay;
+        env.gain.setValueAtTime(0,   t0);
+        env.gain.linearRampToValueAtTime(vol, t0+0.3);
+        env.gain.setValueAtTime(vol, t0+apDur-0.8);
+        env.gain.linearRampToValueAtTime(0,   t0+apDur);
+        src.start(t0); src.stop(t0+dur2+0.1);
+      });
+
+      // Occasional excited individual shouts — short high bursts
+      [0.4, 0.9, 1.5, 2.1].forEach(st=>{
+        noiseBurst({ dur:0.12, vol:0.08, lpFreq:6000, hpFreq:2000, delay:st });
+      });
+    }, 800); // applause starts just after fanfare begins
+  }
+
+  /* ── 9. UNSOLD  (professional downward chime) ── */
+  function unsold(){
+    const c   = ac();
+    const rev = makeReverb(1.5, 0.3);
+    // Descending minor third — clean, not cartoonish
+    const notes = [
+      {f:523.25, t:0.0,  dur:0.5},
+      {f:466.16, t:0.18, dur:0.5},
+      {f:392.0,  t:0.36, dur:0.7},
+    ];
+    notes.forEach(({f,t,dur})=>{
+      const parts = [1, 2.756, 5.404];
+      parts.forEach((r,i)=>{
+        const o   = c.createOscillator();
+        const env = c.createGain();
+        o.type='sine'; o.frequency.value=f*r;
+        o.connect(env); env.connect(c.destination); env.connect(rev);
+        env.gain.setValueAtTime(0,           c.currentTime+t);
+        env.gain.linearRampToValueAtTime(0.18/Math.pow(2,i), c.currentTime+t+0.008);
+        env.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+t+dur);
+        o.start(c.currentTime+t); o.stop(c.currentTime+t+dur+0.05);
+      });
+    });
+    // Soft low thud
+    noiseBurst({ dur:0.3, vol:0.3, lpFreq:200, delay:0.36 });
+  }
+
+  /* ── 10. TIMER BEEP  (broadcast-style) ── */
+  function timerBeep(secondsLeft){
+    const c   = ac();
+    const rev = makeReverb(0.4, 0.12);
+    if(secondsLeft <= 5){
+      // Urgent double-beep — like a broadcast clock
+      osc(880,'sine',0.005,0.07,0.22,0.0);
+      osc(880,'sine',0.005,0.07,0.22,0.12);
+    } else {
+      // Single soft beep
+      osc(660,'sine',0.005,0.09,0.15,0.0);
+    }
+  }
+
+  return {
+    startDrone, stopDrone,
+    startSlotTicks, stopSlotTicks,
+    nameLand, countThud,
+    teamSelect, bidInc,
+    gavelBang, sold, unsold,
+    timerBeep,
+  };
+})();
+
+/* ══════════════════════════════════════
+   BUNDLE 1 — PARTICLES · CONFETTI · WAR MODE · ENTRANCE
+   ══════════════════════════════════════ */
+
+/* ── Canvas setup ── */
+function resizeCanvases(){
+  ['particles-canvas','confetti-canvas'].forEach(id=>{
+    const c=document.getElementById(id);
+    c.width=window.innerWidth; c.height=window.innerHeight;
+  });
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+/* ── GOLD PARTICLE BURST (on SOLD) ── */
+function launchParticles(){
+  const canvas = document.getElementById('particles-canvas');
+  const ctx    = canvas.getContext('2d');
+  const cx     = canvas.width/2, cy = canvas.height/2;
+  const particles = [];
+  const colours   = ['#e8b84b','#f5cc6a','#fff8e0','#00e87a','#ffffff','#f97316'];
+
+  for(let i=0;i<120;i++){
+    const angle = Math.random()*Math.PI*2;
+    const speed = 4 + Math.random()*10;
+    particles.push({
+      x:cx, y:cy,
+      vx: Math.cos(angle)*speed,
+      vy: Math.sin(angle)*speed - 3,
+      r:  2 + Math.random()*4,
+      col: colours[Math.floor(Math.random()*colours.length)],
+      alpha:1, life:1,
+      decay: 0.012 + Math.random()*0.018,
+      gravity: 0.25,
+    });
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = false;
+    particles.forEach(p=>{
+      p.vy += p.gravity;
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.vx *= 0.97;
+      p.life -= p.decay;
+      p.alpha = Math.max(0, p.life);
+      if(p.alpha > 0){
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = p.col;
+        ctx.fill();
+        ctx.restore();
+      }
+    });
+    if(alive) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+/* ── CONFETTI RAIN ── */
+function launchConfetti(){
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx    = canvas.getContext('2d');
+  const pieces = [];
+  const colours= ['#e8b84b','#ff4444','#3b9eff','#00e87a','#c084fc','#f97316','#fff'];
+  const shapes = ['rect','circle','ribbon'];
+
+  for(let i=0;i<160;i++){
+    pieces.push({
+      x:     Math.random()*canvas.width,
+      y:     -20 - Math.random()*canvas.height*0.5,
+      w:     6  + Math.random()*8,
+      h:     10 + Math.random()*14,
+      vy:    3  + Math.random()*5,
+      vx:    (Math.random()-0.5)*2.5,
+      rot:   Math.random()*Math.PI*2,
+      rotV:  (Math.random()-0.5)*0.18,
+      col:   colours[Math.floor(Math.random()*colours.length)],
+      shape: shapes[Math.floor(Math.random()*shapes.length)],
+      alpha: 1,
+      life:  1,
+    });
+  }
+
+  const startTime = performance.now();
+  const duration  = 3500; // ms of confetti
+
+  function draw(now){
+    const elapsed = now - startTime;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = false;
+
+    pieces.forEach(p=>{
+      p.y   += p.vy;
+      p.x   += p.vx;
+      p.rot += p.rotV;
+      // Fade out in last second
+      if(elapsed > duration - 1000) p.alpha = Math.max(0,(duration-elapsed)/1000);
+      if(p.y < canvas.height + 30 && p.alpha > 0){
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.col;
+        if(p.shape==='circle'){
+          ctx.beginPath();
+          ctx.arc(0,0,p.w/2,0,Math.PI*2);
+          ctx.fill();
+        } else if(p.shape==='ribbon'){
+          ctx.fillRect(-p.w/2,-p.h/4,p.w,p.h/2);
+        } else {
+          ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+        }
+        ctx.restore();
+      }
+    });
+
+    if(alive && elapsed < duration + 500) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ── WAR MODE ── */
+let team1BidCount = 0, team2BidCount = 0;
+
+function updateWarMode(){
+  const banner = document.getElementById('war-banner');
+  // War mode = both teams have bid at least THREE times this round
+  if(team1BidCount >= 3 && team2BidCount >= 3){
+    banner.classList.add('active');
+  } else {
+    banner.classList.remove('active');
+  }
+}
+
+function resetWarMode(){
+  team1BidCount = 0; team2BidCount = 0;
+  document.getElementById('war-banner').classList.remove('active');
+}
+
+/* ── RECORD SALE ── */
+let recordPrice = 0;
+
+function checkRecord(price){
+  if(price > recordPrice){
+    recordPrice = price;
+    const el = document.getElementById('record-flash');
+    el.textContent = `🏆  RECORD SALE  ₹${price.toFixed(1)} Cr`;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+    return true;
+  }
+  return false;
+}
+
+/* ── PLAYER ENTRANCE ── */
+function triggerPlayerEntrance(){
+  const ps = document.getElementById('player-stage');
+  ps.classList.remove('enter');
+  void ps.offsetWidth;
+  ps.classList.add('enter');
+}
+
+/* ── TIMER URGENCY SHAKE ── */
+function updateTimerUrgency(){
+  const el = document.getElementById('timer');
+  if(timeLeft <= 30 && timeLeft > 0){
+    el.classList.add('urgent');
+  } else {
+    el.classList.remove('urgent');
+  }
+}
+
+/* ══════════════════════════════════════
+   BUNDLE 2 — TEAM NAMES · BID HISTORY · POT PROGRESS · SUMMARY
+   ══════════════════════════════════════ */
+
+/* ── Team Names ── */
+let teamNames = {
+  1: localStorage.getItem('teamName-1') || 'TEAM 1',
+  2: localStorage.getItem('teamName-2') || 'TEAM 2',
+};
+
+function saveTeamName(id, val){
+  const name = val.trim().toUpperCase() || 'TEAM '+id;
+  teamNames[id] = name;
+  try{ localStorage.setItem('teamName-'+id, name); }catch(e){}
+  applyTeamName(id, name);
+}
+function applyTeamName(id, val){
+  const name = (val||'TEAM '+id).toUpperCase();
+  teamNames[id] = name;
+  // Update war banner
+  const banner = document.getElementById('war-banner');
+  if(banner){
+    banner.querySelector('.war-t1').textContent = teamNames[1];
+    banner.querySelector('.war-t2').textContent = teamNames[2];
+  }
+  // Update bid buttons
+  const b1 = document.getElementById('bid-t1');
+  const b2 = document.getElementById('bid-t2');
+  if(b1) b1.innerHTML = `<i class="fas fa-hand-paper"></i> ${teamNames[1]}`;
+  if(b2) b2.innerHTML = `${teamNames[2]} <i class="fas fa-hand-paper"></i>`;
+  // Update panel labels
+  const pl1 = document.querySelector('.panel.left .panel-label');
+  const pl2 = document.querySelector('.panel.right .panel-label');
+  if(pl1) pl1.textContent = teamNames[1]+' ROSTER';
+  if(pl2 && id===2) pl2.textContent = 'PLAYER POOL';
+}
+function initTeamNames(){
+  const i1 = document.getElementById('tname-1');
+  const i2 = document.getElementById('tname-2');
+  if(i1){ i1.value = teamNames[1]; applyTeamName(1, teamNames[1]); }
+  if(i2){ i2.value = teamNames[2]; applyTeamName(2, teamNames[2]); }
+}
+
+/* ── Bid History ── */
+let bidLog = [];
+
+function pushBidHistory(teamId, price){
+  bidLog.unshift({ teamId, price, name: teamNames[teamId] });
+  if(bidLog.length > 5) bidLog.pop();
+  renderBidHistory();
+}
+function renderBidHistory(){
+  const el = document.getElementById('bid-history');
+  if(!el) return;
+  el.innerHTML = bidLog.map((b,i)=>`
+    <div class="bid-entry t${b.teamId}-entry${i===0?' latest':''}">
+      <span class="be-team">${b.name}</span>
+      <span class="be-arrow">→</span>
+      <span class="be-price">₹${b.price.toFixed(1)} Cr</span>
+    </div>`).join('');
+}
+function clearBidHistory(){
+  bidLog = [];
+  const el = document.getElementById('bid-history');
+  if(el) el.innerHTML = '';
+}
+
+/* ── Pot Progress ── */
+let potTotals = {};  // { cat: originalCount }
+
+function initPotTotals(){
+  // Get all unique categories from allPlayers
+  const uniqueCats = new Set(allPlayers.map(p => p.cat));
+  uniqueCats.forEach(cat => {
+    potTotals[cat] = allPlayers.filter(p => p.cat === cat).length;
+  });
+}
+
+/* ── Auction Summary ── */
+function checkAuctionComplete(){
+  const captainNames = new Set(
+    [captains[1], captains[2]].filter(Boolean).map(c=>c.name.trim().toUpperCase())
+  );
+  // Only count non-captain players — captains are pre-assigned and never auctioned
+  const remaining = allPlayers.filter(p=>
+    !soldSet.has(p.id) &&
+    !unsoldSet.has(p.id) &&
+    !captainNames.has(p.name.trim().toUpperCase())
+  );
+  if(remaining.length === 0 && allPlayers.length > 0){
+    setTimeout(showAuctionSummary, 1800);
+  }
+}
+
+function showAuctionSummary(){
+  const statsEl = document.getElementById('summary-stats');
+  const teamsEl = document.getElementById('summary-teams');
+
+  const totalSold    = soldSet.size;
+  const totalUnsold  = unsoldSet.size;
+  const allSoldPrices= [1,2].flatMap(id=>teamRosters[id].map(p=>p.soldFor));
+  const topPrice     = allSoldPrices.length ? Math.max(...allSoldPrices) : 0;
+  const topPlayer    = [1,2].flatMap(id=>teamRosters[id]).find(p=>p.soldFor===topPrice);
+
+  statsEl.innerHTML = `
+    <div class="summary-stat">
+      <div class="summary-stat-val">${totalSold}</div>
+      <div class="summary-stat-lbl">Players Sold</div>
+    </div>
+    <div class="summary-stat">
+      <div class="summary-stat-val">${totalUnsold}</div>
+      <div class="summary-stat-lbl">Unsold</div>
+    </div>
+    <div class="summary-stat">
+      <div class="summary-stat-val">₹${topPrice.toFixed(1)}Cr</div>
+      <div class="summary-stat-lbl">Record Sale</div>
+    </div>
+    ${topPlayer ? `<div class="summary-stat" style="max-width:160px;">
+      <div class="summary-stat-val" style="font-family:var(--font-d);font-size:1.1rem;letter-spacing:0.06em;line-height:1.2;">${topPlayer.name}</div>
+      <div class="summary-stat-lbl">Most Expensive</div>
+    </div>` : ''}`;
+
+  teamsEl.innerHTML = [1,2].map(tid=>{
+    const roster = teamRosters[tid];
+    const cap    = captains[tid];
+
+    // Captain row at top
+    const capRow = cap ? `
+      <div class="summary-player-row" style="border-color:rgba(232,184,75,0.25);background:rgba(232,184,75,0.05);">
+        <span class="summary-p-name" style="color:var(--gold);">👑 ${cap.name}</span>
+        <span class="summary-p-price" style="color:var(--gold);font-size:0.65rem;letter-spacing:0.1em;">CAPTAIN</span>
+      </div>` : '';
+
+    const rows = roster.length
+      ? roster.map(p=>`
+          <div class="summary-player-row">
+            <span class="summary-p-name">${catMeta[p.cat]?.icon||''} ${p.name}</span>
+            <span class="summary-p-price">₹${p.soldFor.toFixed(1)}Cr</span>
+          </div>`).join('')
+      : '<div style="color:var(--muted);font-size:0.8rem;padding:8px 0;">No players</div>';
+
+    return `<div class="summary-team st${tid}">
+      <div class="summary-team-name">${teamNames[tid]}</div>
+      <div style="font-family:var(--font-m);font-size:0.68rem;color:var(--muted);margin-bottom:8px;">
+        ${roster.length} players · ₹${spent[tid].toFixed(1)}Cr spent · ₹${budgets[tid].toFixed(1)}Cr left
+      </div>
+      ${capRow}${rows}
+    </div>`;
+  }).join('');
+
+  document.getElementById('summary-overlay').classList.add('show');
+  saveAuctionToHistory();
+  try{ localStorage.removeItem('auctionActive'); }catch(e){}
+  try{ SFX.sold(); }catch(e){}
+}
+
+/* ── SYNC NEW PLAYERS ── */
+function checkForNewPlayers(){
+  try{
+    const latest = JSON.parse(localStorage.getItem('auctionPlayers') || '[]');
+    const currentIds = new Set(allPlayers.map(p=>p.id));
+    const newOnes = latest.filter(p => !currentIds.has(p.id));
+    const badge = document.getElementById('sync-badge');
+    if(newOnes.length > 0){
+      badge.textContent = '+'+newOnes.length;
+      badge.classList.add('visible');
+    } else {
+      badge.classList.remove('visible');
+    }
+    return newOnes;
+  }catch(e){ return []; }
+}
+
+function syncNewPlayers(){
+  const newOnes = checkForNewPlayers();
+  const statusEl = document.getElementById('sync-status-text');
+
+  if(newOnes.length === 0){
+    if(statusEl){ statusEl.textContent = '✓ Already up to date'; }
+    setTimeout(()=>{ if(statusEl) statusEl.textContent = 'Add new players from squad builder'; }, 2000);
+    return;
+  }
+
+  // Safely add only the new players — never touch existing auction state
+  newOnes.forEach(p => allPlayers.push(p));
+  
+  // Reinitialize catMeta in case new categories were added
+  catMeta = initCatMeta();
+  
+  initPotTotals();
+  renderPoolTabs(); renderPool(); renderPotSelectorWithProgress();
+  updateMaxBidDisplay();
+  document.getElementById('sync-badge').classList.remove('visible');
+
+  if(statusEl){ statusEl.textContent = `✓ ${newOnes.length} player${newOnes.length>1?'s':''} added!`; }
+  setTimeout(()=>{ if(statusEl) statusEl.textContent = 'Add new players from squad builder'; }, 2500);
+}
+
+// Poll for new players every 5 seconds while auction is open
+setInterval(checkForNewPlayers, 5000);
+
+// Also detect changes if squad builder is open in another tab
+window.addEventListener('storage', e=>{
+  if(e.key === 'auctionPlayers') checkForNewPlayers();
+});
+
+/* ── MANUAL ADD COMPLETED BID ── */
+let manualSelectedTeam = null;
+
+function openManualAdd(){
+  manualSelectedTeam = null;
+  // Populate dropdown — only players not yet sold AND not in unsold pool AND not captains
+  const captainNames = new Set(
+    [captains[1], captains[2]].filter(Boolean).map(c=>c.name.trim().toUpperCase())
+  );
+  const available = allPlayers.filter(p =>
+    !soldSet.has(p.id) &&
+    !unsoldSet.has(p.id) &&
+    !captainNames.has(p.name.trim().toUpperCase())
+  );
+  const sel = document.getElementById('manual-player-select');
+  sel.innerHTML = '<option value="">— Select Player —</option>' +
+    available.map(p => {
+      const m = catMeta[p.cat] || {};
+      return `<option value="${p.id}">${m.icon||''} ${p.name} (Base ₹${p.base.toFixed(1)}Cr · ${m.label||p.cat})</option>`;
+    }).join('');
+  // Pre-fill price with base price on player selection
+  sel.onchange = () => {
+    const found = available.find(p=>p.id==sel.value);
+    if(found) document.getElementById('manual-price').value = found.base.toFixed(1);
+  };
+  // Update team button labels
+  document.getElementById('manual-t1-label').textContent = teamNames[1];
+  document.getElementById('manual-t2-label').textContent = teamNames[2];
+  document.getElementById('manual-t1-btn').classList.remove('selected');
+  document.getElementById('manual-t2-btn').classList.remove('selected');
+  document.getElementById('manual-price').value = '';
+  document.getElementById('manual-modal').classList.add('show');
+  switchManualTab('add'); // always open on add tab
+}
+
+function selectManualTeam(id){
+  manualSelectedTeam = id;
+  document.getElementById('manual-t1-btn').classList.toggle('selected', id===1);
+  document.getElementById('manual-t2-btn').classList.toggle('selected', id===2);
+}
+
+function closeManualAdd(){
+  document.getElementById('manual-modal').classList.remove('show');
+  manualSelectedTeam = null;
+  modifySelectedTeam = null;
+}
+
+/* ── Tab switcher ── */
+function switchManualTab(tab){
+  const isAdd = tab==='add';
+  document.getElementById('manual-tab-add').style.display    = isAdd ? 'flex' : 'none';
+  document.getElementById('manual-tab-add').style.flexDirection = 'column';
+  document.getElementById('manual-tab-add').style.gap        = '12px';
+  document.getElementById('manual-tab-modify').style.display = isAdd ? 'none' : 'flex';
+  document.getElementById('manual-tab-modify').style.flexDirection = 'column';
+  document.getElementById('manual-tab-modify').style.gap     = '12px';
+  // Tab button highlight
+  document.getElementById('tab-add').style.background    = isAdd ? 'rgba(232,184,75,0.12)' : 'transparent';
+  document.getElementById('tab-add').style.color         = isAdd ? 'var(--gold)' : 'rgba(255,255,255,0.35)';
+  document.getElementById('tab-modify').style.background = !isAdd ? 'rgba(192,132,252,0.12)' : 'transparent';
+  document.getElementById('tab-modify').style.color      = !isAdd ? '#c084fc' : 'rgba(255,255,255,0.35)';
+
+  if(!isAdd) populateModifyDropdown();
+}
+
+/* ── MODIFY ENTRY ── */
+let modifySelectedTeam = null;
+
+function populateModifyDropdown(){
+  const sel = document.getElementById('modify-player-select');
+  document.getElementById('modify-t1-label').textContent = teamNames[1];
+  document.getElementById('modify-t2-label').textContent = teamNames[2];
+
+  const allSold = [1,2].flatMap(tid =>
+    teamRosters[tid].map(p=>({ ...p, _team: tid }))
+  );
+
+  sel.innerHTML = '<option value="">— Select Sold Player —</option>' +
+    allSold.map(p=>{
+      const m = catMeta[p.cat]||{};
+      return `<option value="${p.id}_${p._team}">${m.icon||''} ${p.name} → ${teamNames[p._team]} @ ₹${p.soldFor.toFixed(1)}Cr</option>`;
+    }).join('');
+
+  modifySelectedTeam = null;
+  document.getElementById('modify-t1-btn').classList.remove('selected');
+  document.getElementById('modify-t2-btn').classList.remove('selected');
+  document.getElementById('modify-price').value = '';
+}
+
+function prefillModify(){
+  const val = document.getElementById('modify-player-select').value;
+  if(!val) return;
+  const [pid, tid] = val.split('_').map(Number);
+  const player = teamRosters[tid].find(p=>p.id===pid);
+  if(!player) return;
+  // Pre-select the current team and price
+  modifySelectedTeam = tid;
+  document.getElementById('modify-t1-btn').classList.toggle('selected', tid===1);
+  document.getElementById('modify-t2-btn').classList.toggle('selected', tid===2);
+  document.getElementById('modify-price').value = player.soldFor.toFixed(1);
+}
+
+function selectModifyTeam(id){
+  modifySelectedTeam = id;
+  document.getElementById('modify-t1-btn').classList.toggle('selected', id===1);
+  document.getElementById('modify-t2-btn').classList.toggle('selected', id===2);
+}
+
+function saveModifyEntry(){
+  const val   = document.getElementById('modify-player-select').value;
+  const newPrice = parseFloat(document.getElementById('modify-price').value);
+  if(!val)                  { alert('Select a player');        return; }
+  if(!modifySelectedTeam)   { alert('Select new team');        return; }
+  if(isNaN(newPrice)||newPrice<=0){ alert('Enter valid price'); return; }
+
+  const [pid, oldTid] = val.split('_').map(Number);
+  const newTid = modifySelectedTeam;
+
+  // Find in old roster
+  const oldIdx = teamRosters[oldTid].findIndex(p=>p.id===pid);
+  if(oldIdx===-1){ alert('Player not found in roster'); return; }
+  const player = teamRosters[oldTid][oldIdx];
+  const oldPrice = player.soldFor;
+
+  // ── Reverse old entry ──
+  budgets[oldTid] = parseFloat((budgets[oldTid] + oldPrice).toFixed(1));
+  spent[oldTid]   = parseFloat((spent[oldTid]   - oldPrice).toFixed(1));
+  counts[oldTid]--;
+  teamRosters[oldTid].splice(oldIdx, 1);
+
+  // ── Apply new entry ──
+  budgets[newTid] = parseFloat((budgets[newTid] - newPrice).toFixed(1));
+  spent[newTid]   = parseFloat((spent[newTid]   + newPrice).toFixed(1));
+  counts[newTid]++;
+  teamRosters[newTid].push({...player, soldFor: newPrice});
+
+  // Update all financial displays
+  [oldTid, newTid].forEach(tid=>{
+    document.getElementById(`budget-${tid}`).textContent = budgets[tid].toFixed(1);
+    document.getElementById(`spent-${tid}`).textContent  = spent[tid].toFixed(1);
+    document.getElementById(`count-${tid}`).textContent  = counts[tid];
+    updateBudgetColour(tid);
+  });
+  updateMaxBidDisplay();
+  updateBudgetBars();
+
+  // Rebuild both roster lists from scratch
+  rebuildRosterList(1);
+  rebuildRosterList(2);
+
+  renderPoolTabs(); renderPool(); renderPotSelectorWithProgress();
+  closeManualAdd();
+}
+
+function removeEntry(){
+  const val = document.getElementById('modify-player-select').value;
+  if(!val){ alert('Select a player'); return; }
+  if(!confirm('Remove this player from the roster? They will return to their original pot.')) return;
+
+  const [pid, tid] = val.split('_').map(Number);
+  const idx = teamRosters[tid].findIndex(p=>p.id===pid);
+  if(idx===-1) return;
+  const player = teamRosters[tid][idx];
+
+  // Reverse financials
+  budgets[tid] = parseFloat((budgets[tid] + player.soldFor).toFixed(1));
+  spent[tid]   = parseFloat((spent[tid]   - player.soldFor).toFixed(1));
+  counts[tid]--;
+  teamRosters[tid].splice(idx, 1);
+
+  // Remove from soldSet — player goes back to their original pot
+  soldSet.delete(pid);
+
+  // Update displays
+  document.getElementById(`budget-${tid}`).textContent = budgets[tid].toFixed(1);
+  document.getElementById(`spent-${tid}`).textContent  = spent[tid].toFixed(1);
+  document.getElementById(`count-${tid}`).textContent  = counts[tid];
+  updateBudgetColour(tid);
+  updateMaxBidDisplay();
+  updateBudgetBars();
+  rebuildRosterList(tid);
+  renderPoolTabs(); renderPool(); renderPotSelectorWithProgress();
+  closeManualAdd();
+}
+
+function rebuildRosterList(tid){
+  const list = document.getElementById(`list-${tid}`);
+  list.innerHTML = '';
+  teamRosters[tid].forEach(p=>{
+    const m = catMeta[p.cat]||{};
+    const entry = document.createElement('div');
+    entry.className = 'player-entry';
+    entry.innerHTML = `<span class="pname">${m.icon||''} ${p.name}</span><span class="pprice">₹${p.soldFor.toFixed(1)}Cr</span>`;
+    list.appendChild(entry);
+  });
+}
+
+function saveManualBid(){
+  const sel   = document.getElementById('manual-player-select');
+  const price = parseFloat(document.getElementById('manual-price').value);
+  const pid   = parseInt(sel.value);
+
+  if(!sel.value)         { alert('Select a player');        return; }
+  if(!manualSelectedTeam){ alert('Select a team');          return; }
+  if(isNaN(price)||price<=0){ alert('Enter a valid price'); return; }
+
+  const player = allPlayers.find(p=>p.id===pid);
+  if(!player){ alert('Player not found'); return; }
+
+  // Budget cap check
+  const cap = calcMaxBid(manualSelectedTeam);
+  if(price > cap){
+    showCapModal(manualSelectedTeam, price, cap);
+    return;
+  }
+
+  const tid = manualSelectedTeam;
+
+  // Mark permanently sold — removed from randomizer
+  soldSet.add(player.id);
+  unsoldSet.delete(player.id);
+
+  // Update financials
+  budgets[tid] = parseFloat((budgets[tid]-price).toFixed(1));
+  spent[tid]   = parseFloat((spent[tid]+price).toFixed(1));
+  counts[tid]++;
+  teamRosters[tid].push({...player, soldFor: price});
+
+  // Update UI
+  document.getElementById(`budget-${tid}`).textContent = budgets[tid].toFixed(1);
+  document.getElementById(`spent-${tid}`).textContent  = spent[tid].toFixed(1);
+  document.getElementById(`count-${tid}`).textContent  = counts[tid];
+  updateMaxBidDisplay();
+  updateBudgetBars();
+  updateBudgetColour(tid);
+
+  // Add to roster list
+  const m = catMeta[player.cat] || {};
+  const entry = document.createElement('div');
+  entry.className = 'player-entry';
+  entry.innerHTML = `<span class="pname">${m.icon||''} ${player.name}</span><span class="pprice">₹${price.toFixed(1)}Cr</span>`;
+  document.getElementById(`list-${tid}`).prepend(entry);
+
+  // Refresh pools
+  renderPoolTabs(); renderPool(); renderPotSelectorWithProgress();
+  checkRecord(price);
+  checkAuctionComplete();
+  closeManualAdd();
+}
+
+function saveManualUnsold(){
+  const sel = document.getElementById('manual-player-select');
+  const pid = parseInt(sel.value);
+
+  if(!sel.value){ alert('Select a player'); return; }
+
+  const player = allPlayers.find(p=>p.id===pid);
+  if(!player){ alert('Player not found'); return; }
+
+  // Move to unsold pool — removed from original pot randomizer
+  unsoldSet.add(player.id);
+  soldSet.delete(player.id); // ensure not in sold
+
+  // Refresh pools
+  renderPoolTabs(); renderPool(); renderPotSelectorWithProgress();
+  closeManualAdd();
+}
+
+/* ── FIX UNSOLD POOL — remove from original pots ── */
+// Override renderPool so unsold players don't appear in original pot filters
+// (already handled in renderPool via unsold-pot-item class, but they were still pickable)
+// Override renderPotSelectorWithProgress to exclude unsold from pot counts
+function renderPotSelectorWithProgress(){
+  const captainNames = new Set(
+    [captains[1], captains[2]].filter(Boolean).map(c=>c.name.trim().toUpperCase())
+  );
+  const notCap = p => !captainNames.has(p.name.trim().toUpperCase());
+  
+  // Get all unique categories from allPlayers
+  const allCategories = [...new Set(allPlayers.map(p => p.cat))].sort();
+  
+  let html = allCategories.map(cat=>{
+    const total    = potTotals[cat] || 0;
+    const remaining= allPlayers.filter(p=>p.cat===cat&&!soldSet.has(p.id)&&!unsoldSet.has(p.id)&&notCap(p)).length;
+    const pct      = total > 0 ? Math.round(((total-remaining)/total)*100) : 0;
+    const meta = catMeta[cat] || { icon: '⭐', label: cat.replace(/_/g, ' ') };
+    
+    // Determine CSS class for styling (use pot color classes or use data attributes)
+    const cssClass = ['bat', 'bowl', 'ar', 'wk', '1mp'].includes(cat) ? cat : 'custom';
+    
+    return `<button class="pot-sel-btn ${cssClass}${remaining===0?' empty':''}" onclick="pickFromPot('${cat}')" style="--pot-color:${meta.clr}; --pot-hover:rgba(${hexToRgb(meta.clr)?.join(',')},0.15)">
+      ${meta.icon} ${meta.label}s<span class="sel-count">${remaining}</span>
+      <div class="pot-progress" style="width:${pct}%;background-color:${meta.clr}"></div>
+    </button>`;
+  }).join('');
+  
+  const unsoldCount = [...unsoldSet].filter(id=>{ const p=allPlayers.find(x=>x.id===id); return p&&notCap(p); }).length;
+  if(unsoldCount > 0){
+    const meta = catMeta['unsold'] || { icon: '🔄', label: 'Unsold', clr: '#f97316' };
+    html += `<button class="pot-sel-btn unsold" onclick="pickFromPot('unsold')">
+      ${meta.icon} ${meta.label} Pool<span class="sel-count">${unsoldCount}</span>
+      <div class="pot-progress" style="width:0%;background-color:${meta.clr}"></div>
+    </button>`;
+  }
+  document.getElementById('pot-selector').innerHTML = html;
+}
+
+// Helper function to convert hex color to RGB
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? [
+    parseInt(result[1], 16),
+    parseInt(result[2], 16),
+    parseInt(result[3], 16)
+  ] : null;
+}
+
+/* ══════════════════════════════════════
+   AUCTION HISTORY
+   ══════════════════════════════════════ */
+
+function saveAuctionToHistory(){
+  const allSoldPrices = [1,2].flatMap(id=>teamRosters[id].map(p=>p.soldFor));
+  const topPrice  = allSoldPrices.length ? Math.max(...allSoldPrices) : 0;
+  const topPlayer = [1,2].flatMap(id=>teamRosters[id]).find(p=>p.soldFor===topPrice);
+
+  const entry = {
+    id:      Date.now(),
+    date:    new Date().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }),
+    team1:   teamNames[1],
+    team2:   teamNames[2],
+    totalSold:   soldSet.size,
+    totalUnsold: unsoldSet.size,
+    recordPrice: topPrice,
+    recordPlayer: topPlayer ? topPlayer.name : '—',
+    captains: {
+      1: captains[1] ? captains[1].name : null,
+      2: captains[2] ? captains[2].name : null,
+    },
+    rosters: {
+      1: { spent: spent[1], budget: budgets[1], count: counts[1],
+           players: teamRosters[1].map(p=>({ name:p.name, cat:p.cat, price:p.soldFor })) },
+      2: { spent: spent[2], budget: budgets[2], count: counts[2],
+           players: teamRosters[2].map(p=>({ name:p.name, cat:p.cat, price:p.soldFor })) },
+    },
+  };
+
+  try{
+    const existing = JSON.parse(localStorage.getItem('auctionHistory') || '[]');
+    existing.unshift(entry); // newest first
+    if(existing.length > 20) existing.pop(); // keep last 20
+    localStorage.setItem('auctionHistory', JSON.stringify(existing));
+    updateHistoryBadge();
+  }catch(e){ console.warn('History save failed:', e); }
+}
+
+function updateHistoryBadge(){
+  try{
+    const history = JSON.parse(localStorage.getItem('auctionHistory') || '[]');
+    const badge = document.getElementById('history-count-badge');
+    if(badge) badge.textContent = history.length;
+  }catch(e){}
+}
+
+function openHistory(){
+  try{
+    const history = JSON.parse(localStorage.getItem('auctionHistory') || '[]');
+    const list = document.getElementById('history-list');
+
+    if(!history.length){
+      list.innerHTML = `<div class="history-empty">
+        <div style="font-size:2.5rem;margin-bottom:12px;">📭</div>
+        No auction history yet.<br>Complete an auction to save it here.
+      </div>`;
+    } else {
+      list.innerHTML = history.map((e,i)=>{
+        const r1 = e.rosters[1], r2 = e.rosters[2];
+        const p1rows = r1.players.map(p=>`
+          <div class="history-player-line">
+            <span>${catMeta[p.cat]?.icon||''} ${p.name}</span>
+            <span>₹${p.price.toFixed(1)}Cr</span>
+          </div>`).join('') || '<div style="color:var(--muted);font-size:0.75rem;">No players</div>';
+        const p2rows = r2.players.map(p=>`
+          <div class="history-player-line">
+            <span>${catMeta[p.cat]?.icon||''} ${p.name}</span>
+            <span>₹${p.price.toFixed(1)}Cr</span>
+          </div>`).join('') || '<div style="color:var(--muted);font-size:0.75rem;">No players</div>';
+
+        return `<div class="history-entry" id="hentry-${e.id}">
+          <div class="history-entry-header" onclick="toggleHistoryEntry('hentry-${e.id}')">
+            <div>
+              <div class="history-entry-title">${e.team1} vs ${e.team2}</div>
+              <div class="history-date">${e.date}</div>
+            </div>
+            <div class="history-chips">
+              <span class="history-chip sold">✓ ${e.totalSold} sold</span>
+              <span class="history-chip record">🏆 ₹${e.recordPrice.toFixed(1)}Cr</span>
+            </div>
+            <i class="fas fa-chevron-down history-toggle-icon"></i>
+          </div>
+          <div class="history-entry-body">
+            <div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;">
+              Record: <strong style="color:var(--gold)">${e.recordPlayer}</strong> @ ₹${e.recordPrice.toFixed(1)}Cr
+              &nbsp;·&nbsp; ${e.totalUnsold} unsold
+            </div>
+            <div class="history-teams-row">
+              <div class="history-team history-ht1">
+                <div class="history-team-name">${e.team1}${e.captains[1]?' (C: '+e.captains[1]+')':''}</div>
+                <div style="font-family:var(--font-m);font-size:0.62rem;color:var(--muted);margin-bottom:6px;">
+                  ${r1.count} players · ₹${r1.spent.toFixed(1)}Cr spent
+                </div>
+                ${p1rows}
+              </div>
+              <div class="history-team history-ht2">
+                <div class="history-team-name">${e.team2}${e.captains[2]?' (C: '+e.captains[2]+')':''}</div>
+                <div style="font-family:var(--font-m);font-size:0.62rem;color:var(--muted);margin-bottom:6px;">
+                  ${r2.count} players · ₹${r2.spent.toFixed(1)}Cr spent
+                </div>
+                ${p2rows}
+              </div>
+            </div>
+            <div style="margin-top:10px;text-align:right;">
+              <button class="history-del-btn" onclick="deleteHistoryEntry(${e.id})">
+                <i class="fas fa-trash-alt"></i> Delete
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('history-modal').classList.add('show');
+  }catch(e){ console.warn('History load failed:', e); }
+}
+
+function toggleHistoryEntry(id){
+  document.getElementById(id).classList.toggle('open');
+}
+
+function deleteHistoryEntry(id){
+  try{
+    let history = JSON.parse(localStorage.getItem('auctionHistory') || '[]');
+    history = history.filter(e=>e.id!==id);
+    localStorage.setItem('auctionHistory', JSON.stringify(history));
+    updateHistoryBadge();
+    openHistory(); // re-render
+  }catch(e){}
+}
+
+function closeHistory(){
+  document.getElementById('history-modal').classList.remove('show');
+}
+
+init();
+</script>
+</body>
+</html>
